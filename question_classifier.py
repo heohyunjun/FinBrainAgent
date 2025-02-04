@@ -29,6 +29,7 @@ class QuestionClassifier:
         카테고리 이름만 출력해라.
         """
 
-        response_text = self.llm(classification_prompt).strip()
+        response_text = self.llm.invoke(classification_prompt)
+        print(response_text)
 
         return response_text if response_text in self.categories else "기타"
