@@ -1,5 +1,5 @@
 from typing import List
-from langchain.llms import OpenAI  # OpenAI 모델을 LangChain에서 사용할 경우
+from langchain_openai import OpenAI
 
 class QuestionClassifier:
     def __init__(self, llm: OpenAI, categories: List[str] = None):
@@ -25,7 +25,7 @@ class QuestionClassifier:
         사용자의 질문:
         {question}
 
-        위 카테고리 중 가장 잘 맞는 것을 정확히 하나만 골라라라
+        위 카테고리 중 가장 잘 맞는 것을 정확히 하나만 골라라
         카테고리 이름만 출력해라.
         """
 
