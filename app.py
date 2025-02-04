@@ -8,6 +8,7 @@ from langchain_openai import OpenAI
 from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain_groq import ChatGroq
+from langchain_core.output_parsers import StrOutputParser
 
 from question_classifier import QuestionClassifier
 
@@ -88,11 +89,11 @@ prompt_template = PromptTemplate(
 [사용자 질문]: {question}
 [추가 데이터]: {extra_data}
 
-위 정보를 바탕으로 간결하고 핵심적인 답변을 작성해라라
+위 정보를 바탕으로 간결하고 핵심적인 답변을 작성해라
 """
 )
 
-answer_chain = prompt_template | answer_llm
+answer_chain = prompt_template | answer_llm | StrOutputParser()
 
 ####################################
 # 4) Streamlit App
@@ -127,7 +128,7 @@ def main():
         )
 
         st.markdown("**[최종 답변]**")
-        st.write(answer.strip())
+        st.write(answer)
 
 if __name__ == "__main__":
     main()
