@@ -32,4 +32,5 @@ class QuestionClassifier:
         response_text = self.llm.invoke(classification_prompt)
         print(response_text)
 
-        return response_text if response_text in self.categories else "기타"
+        return response_text if response_text.content in self.categories else "기타"
+
