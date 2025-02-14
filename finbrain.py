@@ -7,7 +7,7 @@ import streamlit as st
 import openai
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from typing import TypedDict, List, Annotated, Literal
+from typing import TypedDict, List, Annotated, Literal, Dict
 
 # LangChain 및 LangGraph 관련 라이브러리
 from langchain_openai import OpenAI
@@ -25,6 +25,7 @@ from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, MessagesState, START, END
 from langgraph.prebuilt import create_react_agent
 
+from agents.agent_library import agent_configs, AgentConfig
 
 # 환경 변수 로드
 load_dotenv()
@@ -72,11 +73,13 @@ def make_supervisor_node(
     
     return supervisor_node
 class AgentMaker:
-    def __init__(self, model_name: str):
+    def __init__(self, model_name: str, agent_configs: Dict[str, AgentConfig]):
         self.llm = ChatGroq(model=model_name, temperature=0)
+        self.agent_configs = agent_configs  # 설정 파일 저장
 
-    def create_agent(self, tools: List, prompt: str = None):
-        return create_react_agent(self.llm, tools=tools, prompt=prompt)
+    def create_agent(self, config: AgentConfig):
+        """AgentConfig 타입을 받아서 에이전트 생성"""
+        return create_react_agent(self.llm, tools=config["tools"], prompt=config.get("prompt"))
 
     def create_agent_node(self, agent, name: str):
         return self._agent_node_function(agent, name)
@@ -91,6 +94,18 @@ class AgentMaker:
             }
         return agent_node
 
+    def create_agent_and_node(self, name: str):
+        """
+        :param name: agent_configs에서 찾을 에이전트 이름
+        :return: (생성된 agent, 생성된 node)
+        """
+        if name not in self.configs:
+            raise ValueError(f"'{name}'설정을 찾을 수 없습니다. (config에 존재하는 키 확인 필요)")
+
+        each_agent_config = self.agent_configs[name]
+        each_agent = self.create_agent(each_agent_config)
+        each_node = self.create_agent_node(each_agent, name)
+        return each_agent, each_node  
 
 
 # 각 Supervisor 노드가 호출할 에이전트 노드 리스트 정의
@@ -127,7 +142,7 @@ reporter_supervisor_node = make_supervisor_node(MODEL_NAME, reporter_agent_node_
 
 
 # 팩토리 인스턴스 생성
-agent_maker = AgentMaker(model_name=MODEL_NAME)
+agent_maker = AgentMaker(model_name=MODEL_NAME, agent_configs=agent_configs)
 
 
 
