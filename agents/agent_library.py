@@ -7,6 +7,18 @@ class AgentConfig(TypedDict):
 
 
 agent_configs: dict[str, AgentConfig] = {
+    "data_team": {
+        "tools": [],
+        "prompt": ""
+    },
+    "financial_team": {
+        "tools": [],
+        "prompt": ""
+    },
+    "reporter_team": {
+        "tools": [],
+        "prompt": ""
+    },
     "data_retrieval": {
         "tools": [],
         "prompt": ""
