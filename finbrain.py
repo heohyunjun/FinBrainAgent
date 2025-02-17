@@ -8,6 +8,8 @@ import openai
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from typing import TypedDict, List, Annotated, Literal, Dict
+from typing import Callable
+
 
 # LangChain 및 LangGraph 관련 라이브러리
 from langchain_openai import OpenAI
@@ -24,6 +26,7 @@ from langgraph.types import Command
 from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, MessagesState, START, END
 from langgraph.prebuilt import create_react_agent
+from langchain_community.tools.tavily_search import TavilySearchResults
 
 from agents.agent_library import agent_configs, AgentConfig
 
@@ -36,6 +39,9 @@ alpha_vantage_key = os.getenv("ALPHA_VANTAGE_API_KEY")
 groq_api_key = os.getenv("GROQ_API_KEY")
 
 MODEL_NAME = "gemma2-9b-it"
+
+# 검색 도구 정의(TavilySearch)
+tavily_tool = TavilySearchResults(max_results=5)
 
 # State 정의
 class FinanceState(TypedDict):
@@ -54,7 +60,7 @@ def make_supervisor_node(
     class Router(TypedDict):
         next: Literal[*options_for_next ]
 
-    def supervisor_node(state: FinanceState) -> Command[Literal[*options_for_next, "__end__"]]:
+    def supervisor_node(state: FinanceState) -> Command[Literal[*members, "__end__"]]:
         # system_prompt를 메시지 맨 앞에 추가한 후, 상태에 저장된 메시지와 결합
         messages = [{"role": "system", "content": system_prompt}] + state["messages"]
         
@@ -67,13 +73,12 @@ def make_supervisor_node(
         # LLM 호출하여 구조화된 응답 획득
         response = llm.with_structured_output(Router).invoke(messages)
         goto = response["next"]
+        
         if goto == "FINISH":
             goto = END
         return Command(goto=goto, update={"next": goto})
     
     return supervisor_node
-
-
 class AgentMaker:
     def __init__(self, model_name: str, agent_configs: Dict[str, AgentConfig]):
         self.llm = ChatGroq(model=model_name, temperature=0)
@@ -83,11 +88,10 @@ class AgentMaker:
         """AgentConfig 타입을 받아서 에이전트 생성"""
         return create_react_agent(self.llm, tools=config["tools"], prompt=config.get("prompt"))
 
-    def create_agent_node(self, agent, name: str):
-        return self._agent_node_function(agent, name)
-
-    def _agent_node_function(self, agent, name: str):
-        def agent_node(state: FinanceState):
+    def create_agent_node(self, agent, name: str) -> Callable[[FinanceState], Command[Literal["director"]]]:
+        """
+        """
+        def agent_node(state: FinanceState) -> Command[Literal["director"]]:
             result = agent.invoke(state)
             return Command(
                 update={
@@ -95,10 +99,10 @@ class AgentMaker:
                         HumanMessage(content=result["messages"][-1].content, name=name)
                     ]
                 },
-                goto="director",  
+                goto="director",
             )
         return agent_node
-
+    
     def create_agent_and_node(self, name: str):
         """
         :param name: agent_configs에서 찾을 에이전트 이름
@@ -148,6 +152,7 @@ finance_builder.add_node("reporter_team", reporter_team_node)
 
 finance_builder.add_edge(START, "director")
 finance_graph = finance_builder.compile()
+
 
 
 # def main():
