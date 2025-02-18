@@ -1,5 +1,6 @@
 from typing import List, TypedDict, Optional
 
+from agents.agent_tool import DataTools
 
 class AgentConfig(TypedDict):
     tools: List
@@ -8,7 +9,7 @@ class AgentConfig(TypedDict):
 
 agent_configs: dict[str, AgentConfig] = {
     "data_team": {
-        "tools": [],
+        "tools": [DataTools.get_tavily_search_tool()],
         "prompt": ""
     },
     "financial_team": {
