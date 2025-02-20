@@ -3,7 +3,7 @@ from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain.tools import tool
 from pydantic import BaseModel, Field
 import yfinance as yf
-
+from typing import Annotated, List
 
 # Define the input schema
 class NewsInput(BaseModel):
@@ -18,18 +18,20 @@ class DataTools:
         return TavilySearchResults(max_results=cls.tavily_max_results)
 
 
-    @classmethod
-    @tool(args_schema=NewsInput)
-    def _get_stock_news_internal(ticker: str):
-        """Fetch the latest news articles for a given ticker symbol."""
+    @tool
+    def get_stock_news(
+        ticker: Annotated[str, "Stock ticker symbol"]
+    ) -> Annotated[List[str], "List of summaries for the latest stock news of the given ticker"]:
+        """
+        Retrieves summaries of the latest news related to the given stock ticker.
+        """
         stock = yf.Ticker(ticker)
         news = stock.news
-        return news
 
-    @classmethod
-    def get_stock_news(cls, ticker: str):
-        """
-        사용자가 단순히 `get_stock_news("AAPL")`처럼 호출할 수 있도록 래퍼 함수 추가.
-        내부적으로 `NewsInput`을 자동 생성하여 `_get_stock_news_internal()`에 전달.
-        """
-        return cls._get_stock_news_internal(NewsInput(ticker=ticker))
+        # 뉴스가 존재하고, 각 항목에서 'content'와 'summary'가 있는 경우만 추출
+        summaries = [
+            item['content']['summary'] for item in news 
+            if 'content' in item and 'summary' in item['content']
+        ] if news else []
+
+        return summaries

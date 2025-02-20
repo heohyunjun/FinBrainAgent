@@ -9,8 +9,12 @@ class AgentConfig(TypedDict):
 
 agent_configs: dict[str, AgentConfig] = {
     "data_team": {
-        "tools": [DataTools.get_tavily_search_tool()],
-        "prompt": ""
+        "tools": [DataTools.get_tavily_search_tool(),
+                  DataTools.get_stock_news()],
+        "prompt": """\n
+                    You are an intelligent news collection agent designed to retrieve and summarize the latest news from reliable sources. \n
+                    Your primary goal is to gather up-to-date and relevant news articles based on specific topics, keywords, or categories\n
+                """
     },
     "financial_team": {
         "tools": [],
