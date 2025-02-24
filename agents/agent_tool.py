@@ -1,6 +1,7 @@
 import requests
 import yfinance as yf
 from typing import Annotated, List, Dict
+import os
 from langchain.tools import tool
 from langchain_community.tools.tavily_search import TavilySearchResults
 
@@ -10,6 +11,7 @@ class DataTools:
     """에이전트가 사용할 다양한 도구를 관리하는 클래스"""
 
     tavily_max_results = 5
+    FRED_API_KEY = os.getenv("FRED_API_KEY")
 
     @classmethod
     def get_tavily_search_tool(cls):
@@ -23,7 +25,7 @@ class DataTools:
         """
         base_url = "https://api.stlouisfed.org/fred/series/observations"
         params = {
-            "api_key": FRED_API_KEY,
+            "api_key": DataTools.FRED_API_KEY,
             "file_type": "json",
             "series_id": series_id,
             "observation_start": observation_start,
@@ -42,7 +44,7 @@ class DataTools:
         """
         release_url = "https://api.stlouisfed.org/fred/release/dates"
         params = {
-            "api_key": FRED_API_KEY,
+            "api_key": DataTools.FRED_API_KEY,
             "file_type": "json",
             "release_id": release_id,
             "sort_order": "desc",
