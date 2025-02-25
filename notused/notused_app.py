@@ -10,7 +10,7 @@ from langchain.chains import LLMChain
 from langchain_groq import ChatGroq
 from langchain_core.output_parsers import StrOutputParser
 
-from question_classifier import QuestionClassifier
+from notused.question_classifier import QuestionClassifier
 
 # 환경 변수 로드
 load_dotenv()
