@@ -1,9 +1,10 @@
 import requests
 import yfinance as yf
-from typing import Annotated, List, Dict
+from typing import TypedDict, List, Annotated, Literal, Dict, Callable, TypeVar, Tuple, Type, Generic,Optional, Any
 import os
 from langchain.tools import tool
 from langchain_community.tools.tavily_search import TavilySearchResults
+import pandas as pd
 
 FRED_API_KEY = "YOUR_FRED_API_KEY"  # 자신의 FRED API 키 입력 필요
 
@@ -243,3 +244,69 @@ class DataTools:
             }
             for entry in jobless_claims
         ]
+
+class DataCleansingTools:
+    @staticmethod
+    def _to_float(value: str) -> float:
+        """Helper to convert string values (e.g., '1,234.5', '5.0%') to float."""
+        if isinstance(value, str):
+            return float(value.replace(",", "").replace("%", ""))
+        return float(value)
+
+    @tool
+    def remove_duplicates(
+        data: Annotated[List[Dict], "List of dictionaries containing raw financial data"]
+    ) -> Annotated[List[Dict], "List of dictionaries with duplicate entries removed"]:
+        """Remove duplicate entries based on all keys."""
+        df = pd.DataFrame(data)
+        df.drop_duplicates(inplace=True)
+        return df.to_dict("records")
+
+    @tool
+    def standardize_dates(
+        data: Annotated[List[Dict], "List of dictionaries containing raw financial data"],
+        date_key: Annotated[str, "Key name for the date field in each dictionary"] = "date"
+    ) -> Annotated[List[Dict], "List of dictionaries with dates standardized to YYYY-MM-DD"]:
+        """Ensure dates are in YYYY-MM-DD format."""
+        for entry in data:
+            if date_key in entry and entry[date_key]:
+                entry[date_key] = pd.to_datetime(entry[date_key]).strftime("%Y-%m-%d")
+        return data
+
+    @tool
+    def normalize_numbers(
+        data: Annotated[List[Dict], "List of dictionaries containing raw financial data"],
+        keys: Annotated[List[str], "List of keys whose values should be converted to floats"]
+    ) -> Annotated[List[Dict], "List of dictionaries with specified numeric fields as floats"]:
+        """Convert numeric strings (e.g., '1,234', '5.0%') to floats for specified keys."""
+        for entry in data:
+            for key in keys:
+                if key in entry and entry[key] not in [None, "N/A"]:
+                    entry[key] = DataCleansingTools._to_float(entry[key])
+        return data
+
+    @tool
+    def handle_missing(
+        data: Annotated[List[Dict], "List of dictionaries containing raw financial data"],
+        keys: Annotated[List[str], "List of keys to check for missing values"],
+        default: Annotated[Any, "Default value to replace missing entries (e.g., 0.0, 'Unknown')"] = 0.0
+    ) -> Annotated[List[Dict], "List of dictionaries with missing values replaced"]:
+        """Replace 'N/A' or None with a default value for specified keys."""
+        for entry in data:
+            for key in keys:
+                if key in entry and entry[key] in [None, "N/A"]:
+                    entry[key] = default
+        return data
+
+    @tool
+    def detect_outliers(
+        data: Annotated[List[Dict], "List of dictionaries containing raw financial data"],
+        key: Annotated[str, "Key name for the numeric field to check for outliers"],
+        threshold: Annotated[float, "Number of standard deviations to define an outlier"] = 3.0
+    ) -> Annotated[List[Dict], "List of dictionaries with an 'outlier' boolean field added"]:
+        """Flag outliers beyond threshold standard deviations for a numeric key."""
+        df = pd.DataFrame(data)
+        values = pd.to_numeric(df[key], errors="coerce")
+        mean, std = values.mean(), values.std()
+        df["outlier"] = values.apply(lambda x: abs(x - mean) > threshold * std if pd.notna(x) else False)
+        return df.to_dict("records")
