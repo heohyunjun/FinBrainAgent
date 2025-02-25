@@ -6,7 +6,6 @@ from langchain.tools import tool
 from langchain_community.tools.tavily_search import TavilySearchResults
 import pandas as pd
 
-FRED_API_KEY = "YOUR_FRED_API_KEY"  # 자신의 FRED API 키 입력 필요
 
 class DataTools:
     """에이전트가 사용할 다양한 도구를 관리하는 클래스"""
