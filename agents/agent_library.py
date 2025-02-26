@@ -7,18 +7,24 @@ class AgentConfig(TypedDict):
 
 agent_configs: dict[str, AgentConfig] = {
     "data_team": {
-        "tools": [
-
-        ],
-        "prompt": ""
+        "tools": [],
+        "prompt": """You are a director managing a conversation between the following workers: ['data_retrieval', 'data_cleaning'].
+            Given the user request, respond with the worker to act next. Each worker will perform a task and return results.
+            When finished, respond with FINISH."""
     },
+    
     "financial_team": {
         "tools": [],
-        "prompt": ""
+        "prompt": """You are a director managing a conversation between the following workers: ['news_sentiment', 'market_trend', 'investment_strategy'].
+            Given the user request, respond with the worker to act next. Each worker will perform a task and return results.
+            When finished, respond with FINISH."""
     },
+    
     "reporter_team": {
         "tools": [],
-        "prompt": ""
+        "prompt": """You are a director managing a conversation between the following workers: ['report_generation', 'summary_extraction'].
+            Given the user request, respond with the worker to act next. Each worker will perform a task and return results.
+            When finished, respond with FINISH."""
     },
     "data_retrieval": {
         "tools": [            
@@ -56,16 +62,72 @@ agent_configs: dict[str, AgentConfig] = {
         """
     },
     "news_sentiment": {
-        "tools": [],
-        "prompt": ""
+        "tools": [
+            DataTools.get_stock_news,
+            DataTools.get_tavily_search_tool()
+        ],
+        "prompt": """You are a News Sentiment Analyst. Your task is to analyze financial news sentiment.
+            
+            Process:
+            1. Collect relevant news articles
+            2. Analyze sentiment (positive/negative/neutral)
+            3. Identify key themes and trends
+            4. Generate sentiment scores
+            
+            Input: {input}
+            Output format: {
+                "sentiment_analysis": {
+                    "overall_score": float,
+                    "sentiment_breakdown": Dict[str, float],
+                    "key_themes": List[str]
+                }
+            }
+        """
     },
+    
     "market_trend": {
-        "tools": [],
-        "prompt": ""
+        "tools": [
+            DataTools.get_core_cpi_data,
+            DataTools.get_core_pce_data,
+            DataTools.get_unemployment_rate_data
+        ],
+        "prompt": """You are a Market Trend Analyst. Your task is to identify and analyze market trends.
+            
+            Analysis areas:
+            1. Economic indicator patterns
+            2. Market movement analysis
+            3. Trend identification
+            4. Pattern recognition
+            
+            Input: {input}
+            Output format: {
+                "trend_analysis": {
+                    "patterns": List[Dict],
+                    "indicators": Dict[str, Any],
+                    "predictions": List[str]
+                }
+            }
+        """
     },
     "investment_strategy": {
-        "tools": [],
-        "prompt": ""
+        "tools": [],  # Uses analysis results from other agents
+        "prompt": """You are an Investment Strategist. Your task is to develop investment recommendations.
+            
+            Strategy development:
+            1. Analyze market conditions
+            2. Evaluate risks and opportunities
+            3. Develop actionable strategies
+            4. Provide implementation guidance
+            
+            Input: {input}
+            Output format: {
+                "strategy": {
+                    "recommendations": List[Dict],
+                    "risk_assessment": Dict[str, float],
+                    "timeline": Dict[str, str]
+                }
+            }
+        """
     },
     "report_generation": {
         "tools": [
