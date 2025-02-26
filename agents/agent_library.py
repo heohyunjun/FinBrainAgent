@@ -1,4 +1,4 @@
-from agents.agent_tool import DataTools, DataCleansingTools
+from agents.agent_tool import DataTools, DataCleansingTools, ReportTools
 from typing import TypedDict, List, Annotated, Literal, Dict, Callable, TypeVar, Tuple, Type, Generic, Optional, Any
 
 class AgentConfig(TypedDict):
@@ -68,11 +68,55 @@ agent_configs: dict[str, AgentConfig] = {
         "prompt": ""
     },
     "report_generation": {
-        "tools": [],
-        "prompt": ""
+        "tools": [
+            ReportTools.generate_report_structure,
+            ReportTools.format_report_section
+        ],
+        "prompt": """You are a Financial Report Generation Expert. Your role is to create clear and professional financial reports based on provided data and analysis.
+
+            Follow these steps to generate reports:
+            1. Identify the report type and generate an appropriate structure
+            2. Format each section's content to maintain consistency
+            3. Effectively explain data and provide insights
+            4. Maintain a professional and objective tone
+            5. Ensure all numerical data is accurately represented
+            6. Include relevant charts and tables where appropriate
+            
+            Guidelines for report writing:
+            - Use clear, concise language
+            - Support all claims with data
+            - Highlight key findings and trends
+            - Provide actionable insights
+            - Maintain consistent formatting
+            
+            Input: {input}
+            Output: Structured financial report
+        """
     },
     "summary_extraction": {
-        "tools": [],
-        "prompt": ""
+        "tools": [
+            ReportTools.extract_key_points,
+            ReportTools.generate_executive_summary
+        ],
+        "prompt": """You are a Financial Report Summary Specialist. Your task is to extract essential information from lengthy reports and create concise summaries.
+            
+            Perform the following tasks:
+            1. Extract key points from the report
+            2. Generate a concise summary while maintaining core messages
+            3. Ensure the summary includes:
+               - Main conclusions
+               - Critical findings
+               - Key recommendations
+               - Important metrics
+               - Significant trends
+            4. Prioritize information based on:
+               - Strategic importance
+               - Financial impact
+               - Market relevance
+               - Time sensitivity
+            
+            Input: {input}
+            Output: Executive summary and list of key points
+        """
     }
 }

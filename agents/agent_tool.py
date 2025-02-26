@@ -309,3 +309,93 @@ class DataCleansingTools:
         mean, std = values.mean(), values.std()
         df["outlier"] = values.apply(lambda x: abs(x - mean) > threshold * std if pd.notna(x) else False)
         return df.to_dict("records")
+
+class ReportTools:
+    """리포트 생성 및 요약을 위한 도구 모음"""
+    
+    @tool
+    def generate_report_structure(
+        data: Annotated[Dict, "Raw data to be included in the report"],
+        report_type: Annotated[str, "Type of report (e.g., 'market_analysis', 'economic_indicators', 'investment_recommendation')"]
+    ) -> Annotated[Dict, "Structured report outline with sections"]:
+        """
+        주어진 데이터를 기반으로 리포트 구조를 생성합니다.
+        """
+        sections = {
+            "market_analysis": [
+                "시장 개요",
+                "주요 지표 분석",
+                "시장 동향",
+                "리스크 요인",
+                "전망"
+            ],
+            "economic_indicators": [
+                "주요 경제 지표 요약",
+                "인플레이션 동향",
+                "고용 시장 현황",
+                "소비자 동향",
+                "정책 영향 분석"
+            ],
+            "investment_recommendation": [
+                "투자 요약",
+                "시장 기회",
+                "위험 요소",
+                "투자 전략",
+                "실행 계획"
+            ]
+        }
+        
+        return {
+            "title": f"{report_type.replace('_', ' ').title()} Report",
+            "date": pd.Timestamp.now().strftime("%Y-%m-%d"),
+            "sections": sections.get(report_type, ["개요", "분석", "결론"]),
+            "data": data
+        }
+
+    @tool
+    def format_report_section(
+        content: Annotated[str, "Raw content for the section"],
+        section_type: Annotated[str, "Type of section (e.g., 'summary', 'analysis', 'recommendation')"],
+        max_length: Annotated[int, "Maximum character length for the section"] = 1000
+    ) -> Annotated[str, "Formatted section content"]:
+        """
+        리포트 섹션의 내용을 지정된 형식과 길이로 포맷팅합니다.
+        """
+        # 내용 길이 제한
+        formatted_content = content[:max_length] if len(content) > max_length else content
+        
+        return formatted_content
+
+    @tool
+    def extract_key_points(
+        text: Annotated[str, "Text to analyze"],
+        max_points: Annotated[int, "Maximum number of key points to extract"] = 5
+    ) -> Annotated[List[str], "List of extracted key points"]:
+        """
+        텍스트에서 주요 포인트를 추출합니다.
+        """
+        # 문장 단위로 분리
+        sentences = text.split('. ')
+        
+        # 중요도에 따라 문장 선택 (여기서는 간단히 처음 max_points개 선택)
+        key_points = [s.strip() + '.' for s in sentences[:max_points] if s.strip()]
+        
+        return key_points
+
+    @tool
+    def generate_executive_summary(
+        report_data: Annotated[Dict, "Complete report data"],
+        max_length: Annotated[int, "Maximum character length for the summary"] = 500
+    ) -> Annotated[str, "Concise executive summary"]:
+        """
+        전체 리포트에서 핵심적인 내용만을 추출하여 요약본을 생성합니다.
+        """
+        # 각 섹션의 첫 번째 문장이나 주요 포인트를 결합
+        summary_points = []
+        for section in report_data.get("sections", []):
+            if isinstance(section, dict) and "content" in section:
+                first_sentence = section["content"].split('. ')[0] + '.'
+                summary_points.append(first_sentence)
+        
+        summary = " ".join(summary_points)
+        return summary[:max_length] if len(summary) > max_length else summary
