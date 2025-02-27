@@ -400,3 +400,113 @@ class ReportTools:
         
         summary = " ".join(summary_points)
         return summary[:max_length] if len(summary) > max_length else summary
+    
+
+class InvestmentTools:
+    """Collection of tools for investment strategy development"""
+    
+    @tool
+    def analyze_risk_reward(
+        market_data: Annotated[Dict[str, Any], "Market analysis data including trends and indicators"],
+        risk_tolerance: Annotated[str, "Risk tolerance level (conservative/moderate/aggressive)"]
+    ) -> Annotated[Dict, "Risk-reward analysis results"]:
+        """
+        Performs risk-reward analysis based on market data.
+        """
+        # Risk thresholds by risk tolerance level
+        risk_thresholds = {
+            "conservative": 0.05,  # 5%
+            "moderate": 0.10,     # 10%
+            "aggressive": 0.15    # 15%
+        }
+        
+        return {
+            "risk_level": risk_tolerance,
+            "max_drawdown": risk_thresholds.get(risk_tolerance, 0.10),
+            "risk_factors": ["market_volatility", "economic_indicators", "sector_risks"],
+            "potential_returns": {
+                "conservative": "3-5%",
+                "moderate": "6-10%",
+                "aggressive": "11-15%"
+            }.get(risk_tolerance, "6-10%")
+        }
+
+    @tool
+    def generate_asset_allocation(
+        risk_profile: Annotated[Dict, "Risk analysis results"],
+        market_conditions: Annotated[Dict, "Current market conditions and trends"]
+    ) -> Annotated[Dict, "Recommended asset allocation"]:
+        """
+        Generates asset allocation strategy based on risk profile and market conditions.
+        """
+        # Base asset allocation ratios by risk level
+        allocations = {
+            "conservative": {
+                "stocks": 0.30,
+                "bonds": 0.50,
+                "cash": 0.15,
+                "alternatives": 0.05
+            },
+            "moderate": {
+                "stocks": 0.50,
+                "bonds": 0.30,
+                "cash": 0.10,
+                "alternatives": 0.10
+            },
+            "aggressive": {
+                "stocks": 0.70,
+                "bonds": 0.15,
+                "cash": 0.05,
+                "alternatives": 0.10
+            }
+        }
+        
+        risk_level = risk_profile.get("risk_level", "moderate")
+        base_allocation = allocations.get(risk_level, allocations["moderate"])
+        
+        return {
+            "asset_allocation": base_allocation,
+            "rebalancing_frequency": "Quarterly",
+            "sector_weights": {
+                "technology": 0.25,
+                "healthcare": 0.20,
+                "financials": 0.15,
+                "consumer": 0.15,
+                "others": 0.25
+            }
+        }
+
+    @tool
+    def create_investment_timeline(
+        strategy: Annotated[Dict, "Investment strategy details"],
+        investment_horizon: Annotated[str, "Investment time horizon (short/medium/long)"]
+    ) -> Annotated[Dict, "Investment timeline and milestones"]:
+        """
+        Creates timeline and milestones for investment strategy execution.
+        """
+        horizon_periods = {
+            "short": {"period": "1-2 years", "review_frequency": "Monthly"},
+            "medium": {"period": "3-5 years", "review_frequency": "Quarterly"},
+            "long": {"period": "5+ years", "review_frequency": "Semi-annually"}
+        }
+        
+        period_info = horizon_periods.get(investment_horizon, horizon_periods["medium"])
+        
+        return {
+            "timeline": {
+                "initial_setup": "Immediate",
+                "first_allocation": "Within 1 week",
+                "first_review": "1 month",
+                "rebalancing": period_info["review_frequency"]
+            },
+            "milestones": [
+                "Initial portfolio setup",
+                "First rebalancing check",
+                "Quarterly performance review",
+                "Annual strategy reassessment"
+            ],
+            "monitoring_schedule": {
+                "frequency": period_info["review_frequency"],
+                "metrics": ["performance", "risk_levels", "allocation_drift"]
+            }
+        }

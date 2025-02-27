@@ -1,4 +1,4 @@
-from agents.agent_tool import DataTools, DataCleansingTools, ReportTools
+from agents.agent_tool import DataTools, DataCleansingTools, ReportTools, InvestmentTools
 from typing import TypedDict, List, Annotated, Literal, Dict, Callable, TypeVar, Tuple, Type, Generic, Optional, Any
 
 class AgentConfig(TypedDict):
@@ -110,7 +110,11 @@ agent_configs: dict[str, AgentConfig] = {
         """
     },
     "investment_strategy": {
-        "tools": [],  # Uses analysis results from other agents
+        "tools": [
+            InvestmentTools.analyze_risk_reward,
+            InvestmentTools.generate_asset_allocation,
+            InvestmentTools.create_investment_timeline
+        ],
         "prompt": """You are an Investment Strategist. Your task is to develop investment recommendations.
             
             Strategy development:
