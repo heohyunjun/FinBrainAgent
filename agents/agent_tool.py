@@ -1,6 +1,7 @@
 import requests
 import yfinance as yf
-from typing import TypedDict, List, Annotated, Literal, Dict, Callable, TypeVar, Tuple, Type, Generic,Optional, Any
+from typing import  List, Annotated, Literal, Dict, Callable, TypeVar, Tuple, Type, Generic,Optional, Any
+
 import os
 from langchain.tools import tool
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -319,7 +320,7 @@ class ReportTools:
         report_type: Annotated[str, "Type of report (e.g., 'market_analysis', 'economic_indicators', 'investment_recommendation')"]
     ) -> Annotated[Dict, "Structured report outline with sections"]:
         """
-        주어진 데이터를 기반으로 리포트 구조를 생성합니다.
+        Generates a report structure based on the provided data.
         """
         sections = {
             "market_analysis": [
@@ -359,7 +360,7 @@ class ReportTools:
         max_length: Annotated[int, "Maximum character length for the section"] = 1000
     ) -> Annotated[str, "Formatted section content"]:
         """
-        리포트 섹션의 내용을 지정된 형식과 길이로 포맷팅합니다.
+        Formats the content of a report section according to specified format and length.
         """
         # 내용 길이 제한
         formatted_content = content[:max_length] if len(content) > max_length else content
@@ -372,7 +373,7 @@ class ReportTools:
         max_points: Annotated[int, "Maximum number of key points to extract"] = 5
     ) -> Annotated[List[str], "List of extracted key points"]:
         """
-        텍스트에서 주요 포인트를 추출합니다.
+        Extracts key points from the provided text.
         """
         # 문장 단위로 분리
         sentences = text.split('. ')
@@ -388,7 +389,7 @@ class ReportTools:
         max_length: Annotated[int, "Maximum character length for the summary"] = 500
     ) -> Annotated[str, "Concise executive summary"]:
         """
-        전체 리포트에서 핵심적인 내용만을 추출하여 요약본을 생성합니다.
+        Generates an executive summary by extracting essential information from the complete report.
         """
         # 각 섹션의 첫 번째 문장이나 주요 포인트를 결합
         summary_points = []
