@@ -6,23 +6,32 @@ class AgentConfig(TypedDict):
     prompt: Optional[str]
 
 agent_configs: dict[str, AgentConfig] = {
+    "team_director": {
+        "tools": [],
+        "prompt": """You are a director managing a conversation between the following teams: {team_node_list}.
+            Given the user request, respond with the team to act next. Each team will perform a task and return results.
+            When finished, respond with FINISH.
+            If data collection is required, assign the task to the data_team.
+            If financial analysis is needed, assign the task to the financial_team.
+            If report writing is necessary, assign the task to the reporter_team."""
+    },
     "data_team": {
         "tools": [],
-        "prompt": """You are a director managing a conversation between the following workers: ['data_retrieval', 'data_cleaning'].
+        "prompt": """You are a director managing a conversation between the following workers: {data_agent_node_list}.
             Given the user request, respond with the worker to act next. Each worker will perform a task and return results.
             When finished, respond with FINISH."""
     },
     
     "financial_team": {
         "tools": [],
-        "prompt": """You are a director managing a conversation between the following workers: ['news_sentiment', 'market_trend', 'investment_strategy'].
+        "prompt": """You are a director managing a conversation between the following workers: {financial_agent_node_list}.
             Given the user request, respond with the worker to act next. Each worker will perform a task and return results.
             When finished, respond with FINISH."""
     },
     
     "reporter_team": {
         "tools": [],
-        "prompt": """You are a director managing a conversation between the following workers: ['report_generation', 'summary_extraction'].
+        "prompt": """You are a director managing a conversation between the following workers: {reporter_agent_node_list}.
             Given the user request, respond with the worker to act next. Each worker will perform a task and return results.
             When finished, respond with FINISH."""
     },
