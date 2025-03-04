@@ -56,7 +56,7 @@ agent_configs: dict[str, AgentConfig] = {
         """
     },
     "data_retrieval": {
-        "tools": [DataTools.get_tavily_search_tool(), DataTools.get_stock_news],
+        "tools": [DataTools.get_tavily_search_tool, DataTools.get_stock_news],
         "prompt": """
             You are an intelligent data retrieval agent working as part of a data team under a director.
             Your task is to collect relevant and up-to-date data (e.g., news articles, economic indicators) based on the current request and team needs.
@@ -127,7 +127,7 @@ agent_configs: dict[str, AgentConfig] = {
     "news_sentiment": {
         "tools": [
             DataTools.get_stock_news,
-            DataTools.get_tavily_search_tool()
+            DataTools.get_tavily_search_tool
         ],
         "prompt": """
             You are a News Sentiment Analyst working under a director.
