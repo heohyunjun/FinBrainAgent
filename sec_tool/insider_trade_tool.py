@@ -608,7 +608,7 @@ class SEC13D13GAPI(SECBaseAPI):
         if cik:
             conditions.append(f"filers.cik:{cik}")
         return " AND ".join(conditions) if conditions else "*:*"
-    
+        
     def filter_response(response_data):
         """
         SEC 13D/13G API 응답 데이터를 필터링하여 필요한 정보만 반환하는 함수.
@@ -627,6 +627,16 @@ class SEC13D13GAPI(SECBaseAPI):
                 "cusip": filing.get("cusip"),
                 "eventDate": filing.get("eventDate"),
 
+                
+                "titleOfSecurities": filing.get("titleOfSecurities"),  # 증권 명칭 추가
+                "filers": [
+                    {
+                        "cik": filer.get("cik"),
+                        "name": filer.get("name")
+                    }
+                    for filer in filing.get("filers", [])
+                ],  # 파일 제출자 목록 추가
+
                 # 투자자 정보 필터링
                 "owners": [
                     {
@@ -637,6 +647,10 @@ class SEC13D13GAPI(SECBaseAPI):
                         "soleDispositivePower": owner.get("soleDispositivePower"),
                         "sharedDispositivePower": owner.get("sharedDispositivePower"),
                         "aggregateAmountOwned": owner.get("aggregateAmountOwned"),
+                        
+           
+                        "typeOfReportingPerson": owner.get("typeOfReportingPerson"),  # 신고자 유형 추가
+                        "memberOfGroup": owner.get("memberOfGroup"),  # 그룹 소속 여부 추가
                     }
                     for owner in filing.get("owners", [])
                 ],
@@ -657,6 +671,7 @@ class SEC13D13GAPI(SECBaseAPI):
             filtered_filings.append(filtered_filing)
 
         return filtered_filings
+
     
     @staticmethod
     def _fetch_filings_core(
@@ -687,6 +702,7 @@ class SEC13D13GAPI(SECBaseAPI):
         """
         query = SEC13D13GAPI.build_query(issuer_name, owner, start_date, end_date, min_percent, form_type, cik)
         raw_data = SECBaseAPI._fetch_sec_data(SECBaseAPI.SEC_13D_13G_API_URL, query, from_value)
+        # return raw_data
         return SEC13D13GAPI.filter_response(raw_data) if raw_data else None
 
     @tool

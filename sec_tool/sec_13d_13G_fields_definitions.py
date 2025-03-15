@@ -10,6 +10,12 @@ class SEC_13D_13G_NecessaryFields:
     NAME_OF_ISSUER = "nameOfIssuer"  # 신고 대상 기업명
     CUSIP = "cusip"  # 증권 식별 번호 (여러 개 가능)
     EVENT_DATE = "eventDate"  # 거래 발생 날짜
+    TITLE_OF_SECURITIES = "titleOfSecurities"  # 증권 명칭 (예: Common Stock, $0.001 par value per share)
+    
+    # 신고자 (Filers) 정보
+    FILERS = "filers"  # 신고자 정보 리스트
+    FILER_CIK = "filers.cik"  # 신고자 CIK
+    FILER_NAME = "filers.name"  # 신고자 이름
 
     # 투자자 정보
     OWNERS = "owners"  # 투자자 정보 리스트 (하위 필드 포함)
@@ -20,6 +26,8 @@ class SEC_13D_13G_NecessaryFields:
     SOLE_DISPOSITIVE_POWER = "owners.soleDispositivePower"  # 단독 처분권
     SHARED_DISPOSITIVE_POWER = "owners.sharedDispositivePower"  # 공동 처분권
     AGGREGATE_AMOUNT_OWNED = "owners.aggregateAmountOwned"  # 총 보유 주식 수
+    TYPE_OF_REPORTING_PERSON = "owners.typeOfReportingPerson"  # 신고자 유형 (예: 개인(IN), 기관 등)
+    MEMBER_OF_GROUP = "owners.memberOfGroup"  # 그룹 소속 여부
 
     # 법적 이슈 여부
     LEGAL_PROCEEDINGS_DISCLOSURE_REQUIRED = "legalProceedingsDisclosureRequired"  # 법적 문제 여부
