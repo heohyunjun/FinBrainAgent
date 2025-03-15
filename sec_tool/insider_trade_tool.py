@@ -491,7 +491,7 @@ class SEC13FHoldingsAPI(SECBaseAPI):
         return filtered_holdings
 
     @staticmethod
-    def _fetch_holdings_core(
+    def _fetch_filings_core(
         cik: str = None,
         company_name: str = None,
         issuer_name: str = None,
@@ -516,7 +516,7 @@ class SEC13FHoldingsAPI(SECBaseAPI):
         return SEC13FHoldingsAPI.filter_response(raw_data) if raw_data else None
 
     @tool
-    def fetch_holdings(
+    def fetch_filings(
         cik: str = None,
         company_name: str = None,
         issuer_name: str = None,
