@@ -373,7 +373,7 @@ class SECBaseAPI:
     SEC_API_KEY = os.getenv("SEC_API_KEY")
     SEC_INSIDER_TRADE_API_URL = "https://api.sec-api.io/insider-trading"
     SEC_13D_13G_API_URL = "https://api.sec-api.io/form-13d-13g"
-
+    SEC_13F_HOLDINGS_API_URL = "https://api.sec-api.io/form-13f/holdings"
     @staticmethod
     def _fetch_sec_data(api_url: str, query: str, from_value: int = 0) -> dict:
         """
@@ -734,4 +734,184 @@ class SEC13D13GAPI(SECBaseAPI):
         """
         return SEC13D13GAPI._fetch_filings_core(
             issuer_name, owner, start_date, end_date, min_percent, form_type, cik, from_value
+        )
+
+class SEC13FHoldingsAPI(SECBaseAPI):
+    """
+    SEC 13F Holdings 보고서 API 클래스.
+    """
+
+    @staticmethod
+    def build_query(
+        cik: Optional[str] = None,
+        company_name: Optional[str] = None,
+        issuer_name: Optional[str] = None,
+        ticker: Optional[str] = None,
+        cusip: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        min_value: Optional[int] = None,
+        max_value: Optional[int] = None,
+        min_shares: Optional[int] = None,
+        max_shares: Optional[int] = None
+    ) -> str:
+        """
+        사용자가 입력한 간단한 파라미터를 Lucene Query 형식으로 변환하는 함수
+        
+        :param cik: 기관의 CIK 코드 (예: "0001067983")
+        :param company_name: 기관 이름 (예: "BlackRock")
+        :param issuer_name: 보유 종목의 발행사 이름 (예: "Tesla, Inc.")
+        :param ticker: 보유 종목의 티커 (예: "TSLA")
+        :param cusip: 보유 종목의 CUSIP 번호 (예: "88160R101")
+        :param start_date: 검색 시작 날짜 (YYYY-MM-DD)
+        :param end_date: 검색 종료 날짜 (YYYY-MM-DD)
+        :param min_value: 보유 종목 가치의 최소값 (단위: USD)
+        :param max_value: 보유 종목 가치의 최대값 (단위: USD)
+        :param min_shares: 보유 주식 수의 최소값
+        :param max_shares: 보유 주식 수의 최대값
+        :return: Lucene Query 형식의 문자열
+        """
+        conditions = []
+        if cik:
+            conditions.append(f"cik:{cik}")
+        if company_name:
+            conditions.append(f"companyName:\"{company_name}\"")
+        if issuer_name:
+            conditions.append(f"holdings.nameOfIssuer:\"{issuer_name}\"")
+        if ticker:
+            conditions.append(f"holdings.ticker:{ticker}")
+        if cusip:
+            conditions.append(f"holdings.cusip:{cusip}")
+        if start_date and end_date:
+            conditions.append(f"filedAt:[{start_date} TO {end_date}]")
+        elif start_date:
+            conditions.append(f"filedAt:[{start_date} TO *]")
+        elif end_date:
+            conditions.append(f"filedAt:[* TO {end_date}]")
+        if min_value is not None and max_value is not None:
+            conditions.append(f"holdings.value:[{min_value} TO {max_value}]")
+        elif min_value is not None:
+            conditions.append(f"holdings.value:[{min_value} TO *]")
+        elif max_value is not None:
+            conditions.append(f"holdings.value:[* TO {max_value}]")
+        if min_shares is not None and max_shares is not None:
+            conditions.append(f"holdings.sshPrnamt:[{min_shares} TO {max_shares}]")
+        elif min_shares is not None:
+            conditions.append(f"holdings.sshPrnamt:[{min_shares} TO *]")
+        elif max_shares is not None:
+            conditions.append(f"holdings.sshPrnamt:[* TO {max_shares}]")
+
+        return " AND ".join(conditions) if conditions else "*:*"
+
+    @staticmethod
+    def filter_response(response_data):
+        """
+        SEC 13F Holdings API 응답 데이터를 필터링하여 필요한 정보만 반환하는 함수.
+
+        :param response_data: API 응답 JSON (dict)
+        :return: 필터링된 데이터 (list of dict)
+        """
+        filtered_holdings = []
+
+        for filing in response_data.get("data", []):  # API 응답에서 data 필드 사용
+            filtered_filing = {
+                "accessionNo": filing.get("accessionNo"),
+                "formType": filing.get("formType"),
+                "filedAt": filing.get("filedAt", "")[:10],  # YYYY-MM-DD 형식으로 저장, 기본값 빈 문자열
+                "cik": filing.get("cik"),
+                "institutionName": filing.get("companyName"),  # SEC API에서는 companyName 사용
+                "companyNameLong": filing.get("companyNameLong"),  # 기관의 전체 이름 추가
+                "description": filing.get("description"),  # 보고서 설명 추가
+                "linkToFilingDetails": filing.get("linkToFilingDetails"),  # 상세 XML 링크 추가
+                "periodOfReport": filing.get("periodOfReport"),
+                "effectivenessDate": filing.get("effectivenessDate"),  # 효력 발생 날짜 추가
+                "holdings": [
+                    {
+                        "nameOfIssuer": holding.get("nameOfIssuer"),
+                        "ticker": holding.get("ticker"),
+                        "cusip": holding.get("cusip"),
+                        "titleOfClass": holding.get("titleOfClass"),
+                        "value": holding.get("value"),  # 포트폴리오 내 해당 종목의 총 가치
+                        "shrsOrPrnAmt": holding.get("shrsOrPrnAmt", {}).get("sshPrnamt"),  # 주식 수 정확히 매핑
+                        "shrsOrPrnAmtType": holding.get("shrsOrPrnAmt", {}).get("sshPrnamtType"),  # 주식 유형 정확히 매핑
+                        "putCall": holding.get("putCall"),  # 옵션 여부
+                        "investmentDiscretion": holding.get("investmentDiscretion"),
+                        "votingAuthority": {  # 의결권 정보 정확히 매핑
+                            "sole": holding.get("votingAuthority", {}).get("Sole"),
+                            "shared": holding.get("votingAuthority", {}).get("Shared"),
+                            "none": holding.get("votingAuthority", {}).get("None")
+                        },
+                        "cik": holding.get("cik")  # 발행사의 CIK 번호 추가
+                    }
+                    for holding in filing.get("holdings", [])
+                ]
+            }
+
+            filtered_holdings.append(filtered_filing)
+
+        return filtered_holdings
+
+    @staticmethod
+    def _fetch_holdings_core(
+        cik: str = None,
+        company_name: str = None,
+        issuer_name: str = None,
+        ticker: str = None,
+        cusip: str = None,
+        start_date: str = None,
+        end_date: str = None,
+        min_value: int = None,
+        max_value: int = None,
+        min_shares: int = None,
+        max_shares: int = None,
+        from_value: int = 0
+    ) -> dict:
+
+        query = SEC13FHoldingsAPI.build_query(
+            cik, company_name, issuer_name, ticker, 
+            cusip, start_date, end_date, min_value, 
+            max_value, min_shares, max_shares
+        )
+        raw_data = SECBaseAPI._fetch_sec_data(SECBaseAPI.SEC_13F_HOLDINGS_API_URL, query, from_value)
+        # return raw_data
+        return SEC13FHoldingsAPI.filter_response(raw_data) if raw_data else None
+
+    @tool
+    def fetch_holdings(
+        cik: str = None,
+        company_name: str = None,
+        issuer_name: str = None,
+        ticker: str = None,
+        cusip: str = None,
+        start_date: str = None,
+        end_date: str = None,
+        min_value: int = None,
+        max_value: int = None,
+        min_shares: int = None,
+        max_shares: int = None,
+        from_value: int = 0
+    ) -> dict:
+        """
+        SEC 13F Holdings API를 호출하여 지정된 조건에 맞는 기관 투자자의 보유 주식 데이터를 가져옵니다.
+
+        Args:
+            cik (str, optional): 기관의 CIK 코드 (예: "0001067983").
+            company_name (str, optional): 기관 이름 (예: "BlackRock").
+            issuer_name (str, optional): 보유 종목의 발행사 이름 (예: "Tesla, Inc.").
+            ticker (str, optional): 보유 종목의 티커 (예: "TSLA").
+            cusip (str, optional): 보유 종목의 CUSIP 번호 (예: "88160R101").
+            start_date (str, optional): 검색 시작 날짜 (형식: "YYYY-MM-DD"). 기본값은 None.
+            end_date (str, optional): 검색 종료 날짜 (형식: "YYYY-MM-DD"). 기본값은 None.
+            min_value (int, optional): 보유 종목 가치의 최소값 (단위: USD).
+            max_value (int, optional): 보유 종목 가치의 최대값 (단위: USD).
+            min_shares (int, optional): 보유 주식 수의 최소값.
+            max_shares (int, optional): 보유 주식 수의 최대값.
+            from_value (int, optional): 페이징 시작 위치 (기본값: 0). 결과의 오프셋을 지정.
+
+        Returns:
+            dict: SEC API에서 반환된 JSON 데이터. 성공 시 13F Holdings 데이터가 포함된 딕셔너리, 실패 시 None.
+        """
+        return SEC13FHoldingsAPI._fetch_holdings_core(
+            cik, company_name, issuer_name, ticker, cusip, start_date, end_date,
+            min_value, max_value, min_shares, max_shares, from_value
         )
