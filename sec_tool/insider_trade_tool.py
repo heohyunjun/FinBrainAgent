@@ -210,11 +210,15 @@ class SECInsiderTradeAPI(SECBaseAPI):
             # 기본적으로 최근 30일 기준
             start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
 
-        return SECInsiderTradeAPI._fetch_filings_core(
+        result = SECInsiderTradeAPI._fetch_filings_core(
             ticker, owner, transaction_type, start_date, end_date, from_value
         )
     
-
+        # 명확한 결과가 없음을 메시지로 반환
+        if not result or len(result) == 0:
+            return {"message": f"No SEC filings found for {ticker or owner} between {start_date} and {end_date}."}
+        
+        return {"message": result}
 
 class SEC13D13GAPI(SECBaseAPI):
     """
@@ -385,11 +389,15 @@ class SEC13D13GAPI(SECBaseAPI):
         Returns:
             dict: SEC API에서 반환된 JSON 데이터. 성공 시 13D/13G 데이터가 포함된 딕셔너리, 실패 시 None.
         """
-        return SEC13D13GAPI._fetch_filings_core(
+        result = SEC13D13GAPI._fetch_filings_core(
             issuer_name, owner, start_date, end_date, min_percent, form_type, cik, from_value
         )
 
-
+        # 명확한 결과가 없음을 메시지로 반환
+        if not result or len(result) == 0:
+            return {"message": f"No SEC filings found for {issuer_name or owner} between {start_date} and {end_date}."}
+        
+        return {"message": result}
 
 class SEC13FHoldingsAPI(SECBaseAPI):
     """
@@ -566,7 +574,13 @@ class SEC13FHoldingsAPI(SECBaseAPI):
         Returns:
             dict: SEC API에서 반환된 JSON 데이터. 성공 시 13F Holdings 데이터가 포함된 딕셔너리, 실패 시 None.
         """
-        return SEC13FHoldingsAPI._fetch_holdings_core(
+        result= SEC13FHoldingsAPI._fetch_holdings_core(
             cik, company_name, issuer_name, ticker, cusip, start_date, end_date,
             min_value, max_value, min_shares, max_shares, from_value
         )
+
+        # 명확한 결과가 없음을 메시지로 반환
+        if not result or len(result) == 0:
+            return {"message": f"No SEC filings found for {cik or company_name} between {start_date} and {end_date}."}
+        
+        return {"message": result}
