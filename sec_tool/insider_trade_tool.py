@@ -4,7 +4,7 @@ import json
 import os
 from typing import Optional
 from langchain.tools import tool
-
+from datetime import datetime, timedelta
 class SECBaseAPI:
     """
     SEC API의 공통 로직을 처리하는 기반 클래스.
@@ -181,7 +181,9 @@ class SECInsiderTradeAPI(SECBaseAPI):
         transaction_type: str = None,
         start_date: str = None,
         end_date: str = None,
-        from_value: int = 0
+        from_value: int = 0,
+        reference_date: str = None
+        
     ) -> dict:
         """
         SEC Insider Trading API를 호출하여 지정된 조건에 맞는 내부자 거래 데이터를 가져옵니다.
@@ -197,9 +199,21 @@ class SECInsiderTradeAPI(SECBaseAPI):
         Returns:
             dict: 필터링된 내부자 거래 데이터.
         """
+
+        if reference_date is None:
+            reference_date = datetime.now().strftime("%Y-%m-%d")
+
+        if end_date is None:
+            end_date = reference_date
+
+        if start_date is None:
+            # 기본적으로 최근 30일 기준
+            start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
+
         return SECInsiderTradeAPI._fetch_filings_core(
             ticker, owner, transaction_type, start_date, end_date, from_value
         )
+    
 
 
 class SEC13D13GAPI(SECBaseAPI):
@@ -374,6 +388,8 @@ class SEC13D13GAPI(SECBaseAPI):
         return SEC13D13GAPI._fetch_filings_core(
             issuer_name, owner, start_date, end_date, min_percent, form_type, cik, from_value
         )
+
+
 
 class SEC13FHoldingsAPI(SECBaseAPI):
     """
