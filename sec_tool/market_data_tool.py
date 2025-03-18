@@ -52,18 +52,17 @@ class FinancialDataTools:
     """기업 재무 데이터를 다루는 도구 클래스"""
 
     @staticmethod
-    def filter_financial_info(financial_dict: dict) -> pd.DataFrame:
+    def filter_income_statement_info(financial_df: pd.DataFrame) -> pd.DataFrame:
         """
         손익계산서 데이터에서 핵심 지표만 필터링하는 함수.
         
-        :param financial_dict: company_research_tool("TSLA") 로 가져온 dict 데이터
+        :param financial_df: company_research_tool("TSLA") 로 가져온 dict 데이터
         :return: 필터링된 DataFrame (핵심 재무 지표만 포함)
         """
-        # financial_info 키에서 DataFrame 가져오기
-        financial_data = financial_dict.get("financial_info", pd.DataFrame())
 
-        if financial_data.empty:
-            return financial_data  # 데이터가 없으면 그대로 반환
+
+        if financial_df.empty:
+            return financial_df  # 데이터가 없으면 그대로 반환
 
         # 핵심 지표 리스트
         key_metrics = [
@@ -80,25 +79,46 @@ class FinancialDataTools:
             FinancialNecessaryFields.TAX_PROVISION
         ]
 
-        return financial_data.loc[financial_data.index.intersection(key_metrics)]
+        # DataFrame의 인덱스에서 key_metrics와 교집합을 찾아 필터링
+        filtered_df = financial_df.loc[financial_df.index.intersection(key_metrics)]
+        return filtered_df
 
+    
     @staticmethod
     @tool
-    def company_research_tool(ticker: str) -> dict:
-        """Given a ticker, return the financial information and SEC filings"""
+    def get_income_statement(ticker: str, freq: str = "quarterly") -> pd.DataFrame:
+        """
+        주어진 티커에 대해 회사의 손익계산서 데이터를 반환합니다.
+
+        Args:
+            ticker (str): 조회할 주식 티커. 단일 문자열로 제공 (예: "AAPL").
+            freq (str, optional): 데이터의 주기. 유효한 값: "quarterly" (분기별), "yearly" (연간).
+                                기본값은 "quarterly".
+
+        Returns:
+            pd.DataFrame: 지정된 주기(freq)에 따라 필터링된 손익계산서 데이터.
+        """
         company_info = yf.Ticker(ticker)
-        financial_info = company_info.get_financials(freq="quarterly")
+        financial_info = company_info.get_financials(freq=freq)
+        filtered_financial_info = FinancialDataTools.filter_income_statement_info(financial_info)
+        return filtered_financial_info
+    
+    @staticmethod
+    @tool
+    def get_sec_filings(ticker: str) -> dict:
+        """
+        주어진 티커에 대해 회사의 SEC 제출 자료를 반환합니다.
+
+        Args:
+            ticker (str): 조회할 주식 티커. 단일 문자열로 제공 (예: "AAPL").
+
+        Returns:
+            dict: 회사의 SEC 제출 자료를 필터링한 결과.
+        """
+        company_info = yf.Ticker(ticker)
         sec_filings = company_info.get_sec_filings()
-
-        filtered_financial_info = FinancialDataTools.filter_financial_info(financial_info)
         filtered_filings = SECFilingsTools.filter_sec_filings(sec_filings)
-
-        return {
-            'financial_info': filtered_financial_info,
-            'sec_filings': filtered_filings
-        }
-
-
+        return {'sec_filings': filtered_filings}
 class SECFilingsTools:
     """SEC 보고서 데이터를 다루는 도구 클래스"""
 
