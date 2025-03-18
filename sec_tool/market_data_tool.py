@@ -20,11 +20,26 @@ polygon_tools = polygon_toolkit.get_tools()
 class MarketDataTools:
     """주가 및 시장 데이터를 다루는 도구 클래스"""
 
+
     @staticmethod
     @tool
-    def get_stock_price(ticker: str) -> dict:
-        """Given a stock ticker, return the price data for the past month"""
-        stock_info = yf.download(ticker, period='1mo').to_dict()
+    def get_stock_price(ticker: str, period: str = "1d", start: str = None, end: str = None) -> dict:
+        """
+        주어진 주식 티커에 대해 지정된 기간의 가격 데이터를 반환합니다.
+
+        Args:
+            ticker (str): 다운로드할 주식 티커. 단일 문자열로 제공 (예: "AAPL").
+            period (str): 데이터를 가져올 기간. 유효한 값: "1d", "5d", "1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "ytd", "max".
+                        기본값은 "1d". "period"를 사용하거나 "start"와 "end"를 사용해야 함. 두 가지를 동시에 사용할 수 없음.
+            start (str, optional): 데이터 다운로드 시작 날짜(포함). 형식: "YYYY-MM-DD". 예: "2020-01-01".
+                                "period" 대신 사용할 수 있으며, 기본값은 None (99년 전부터).
+            end (str, optional): 데이터 다운로드 종료 날짜(미포함). 형식: "YYYY-MM-DD". 예: "2023-01-01" (마지막 데이터는 "2022-12-31").
+                                "period" 대신 사용할 수 있으며, 기본값은 None (현재 날짜까지).
+
+        Returns:
+            dict: 지정된 티커에 대한 주식 가격 데이터를 딕셔너리 형태로 반환.
+        """
+        stock_info = yf.download(ticker, period=period, start=start, end=end).to_dict()
         return stock_info
 
     @staticmethod
