@@ -105,20 +105,31 @@ class FinancialDataTools:
     
     @staticmethod
     @tool
-    def get_sec_filings(ticker: str) -> dict:
+    def get_financial_event_filings(ticker: str) -> dict:
         """
-        주어진 티커에 대해 회사의 SEC 제출 자료를 반환합니다.
+        주어진 티커에 대해 회사의 재무 보고 및 주요 사건 관련 SEC 제출 자료를 반환합니다.
+        대상 문서 유형: '10-K', '10-Q', '8-K', '10-K/A', '10-Q/A', '8-K/A', '20-F', '6-K'.
 
         Args:
             ticker (str): 조회할 주식 티커. 단일 문자열로 제공 (예: "AAPL").
 
         Returns:
-            dict: 회사의 SEC 제출 자료를 필터링한 결과.
+            dict: 지정된 유형의 SEC 제출 자료를 필터링한 결과. 키는 'financial_event_filings'이며, 값은 필터링된 리스트.
         """
+        # 대상 문서 유형 정의
+        target_types = {'10-K', '10-Q', '8-K', '10-K/A', '10-Q/A', '8-K/A', '20-F', '6-K'}
+
+        # SEC 제출 자료 가져오기
         company_info = yf.Ticker(ticker)
         sec_filings = company_info.get_sec_filings()
-        filtered_filings = SECFilingsTools.filter_sec_filings(sec_filings)
-        return {'sec_filings': filtered_filings}
+
+        # 리스트에서 대상 유형만 필터링
+        filtered_filings = [filing for filing in sec_filings if filing.get('type') in target_types]
+
+    
+        filtered_filings = SECFilingsTools.filter_sec_filings(filtered_filings)
+
+        return {'financial_event_filings': filtered_filings}
 class SECFilingsTools:
     """SEC 보고서 데이터를 다루는 도구 클래스"""
 
