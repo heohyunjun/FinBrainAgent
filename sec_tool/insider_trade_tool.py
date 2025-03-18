@@ -339,7 +339,7 @@ class SEC13D13GAPI(SECBaseAPI):
         min_percent: float = None,
         form_type: str = None,
         cik: str = None,
-        from_value: int = 0
+        from_value: int = 0,
     ) -> dict:
         """
         SEC 13D/13G API를 호출하여 지정된 조건에 맞는 투자 지분 공개 데이터를 가져옵니다.
@@ -371,7 +371,8 @@ class SEC13D13GAPI(SECBaseAPI):
         min_percent: float = None,
         form_type: str = None,
         cik: str = None,
-        from_value: int = 0
+        from_value: int = 0,
+        reference_date: str = None
     ) -> dict:
         """
         SEC 13D/13G API를 호출하여 지정된 조건에 맞는 투자 지분 공개 데이터를 가져옵니다.
@@ -385,10 +386,20 @@ class SEC13D13GAPI(SECBaseAPI):
             form_type (str, optional): 보고서 유형 (예: "13D", "13G", "13D/A"). 기본값은 None.
             cik (str, optional): 특정 기업 CIK 검색. 기본값은 None.
             from_value (int, optional): 페이징 시작 위치 (기본값: 0). 결과의 오프셋을 지정.
-
+            reference_date (str, optional) : 현재 시간 
         Returns:
             dict: SEC API에서 반환된 JSON 데이터. 성공 시 13D/13G 데이터가 포함된 딕셔너리, 실패 시 None.
         """
+        if reference_date is None:
+            reference_date = datetime.now().strftime("%Y-%m-%d")
+
+        if end_date is None:
+            end_date = reference_date
+
+        if start_date is None:
+            # 기본적으로 최근 30일 기준
+            start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
+    
         result = SEC13D13GAPI._fetch_filings_core(
             issuer_name, owner, start_date, end_date, min_percent, form_type, cik, from_value
         )
@@ -552,7 +563,8 @@ class SEC13FHoldingsAPI(SECBaseAPI):
         max_value: int = None,
         min_shares: int = None,
         max_shares: int = None,
-        from_value: int = 0
+        from_value: int = 0,
+        reference_date: str = None
     ) -> dict:
         """
         SEC 13F Holdings API를 호출하여 지정된 조건에 맞는 기관 투자자의 보유 주식 데이터를 가져옵니다.
@@ -570,10 +582,22 @@ class SEC13FHoldingsAPI(SECBaseAPI):
             min_shares (int, optional): 보유 주식 수의 최소값.
             max_shares (int, optional): 보유 주식 수의 최대값.
             from_value (int, optional): 페이징 시작 위치 (기본값: 0). 결과의 오프셋을 지정.
+            reference_date (str, optional) : 현재 시간 
 
         Returns:
             dict: SEC API에서 반환된 JSON 데이터. 성공 시 13F Holdings 데이터가 포함된 딕셔너리, 실패 시 None.
         """
+
+        if reference_date is None:
+            reference_date = datetime.now().strftime("%Y-%m-%d")
+
+        if end_date is None:
+            end_date = reference_date
+
+        if start_date is None:
+            # 기본적으로 최근 30일 기준
+            start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
+
         result= SEC13FHoldingsAPI._fetch_holdings_core(
             cik, company_name, issuer_name, ticker, cusip, start_date, end_date,
             min_value, max_value, min_shares, max_shares, from_value
