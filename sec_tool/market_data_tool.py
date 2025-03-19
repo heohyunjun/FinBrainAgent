@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from langchain.tools import tool
 from langchain_community.agent_toolkits.polygon.toolkit import PolygonToolkit
 from langchain_community.utilities.polygon import PolygonAPIWrapper
+from langchain_community.tools import DuckDuckGoSearchRun
 
 from sec_tool.sec_financial_fiedls_definitions import FinancialNecessaryFields
 
@@ -52,6 +53,11 @@ class MarketDataTools:
     def get_polygon_tools():
         """Polygon API에서 제공하는 모든 도구를 반환합니다."""
         return polygon_tools
+
+    
+    @staticmethod
+    def get_websearch_tool():
+        return DuckDuckGoSearchRun()
 
     @staticmethod
     @tool
