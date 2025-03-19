@@ -1,12 +1,18 @@
+from datetime import datetime, timedelta
+from typing import (
+    List, Annotated, Literal, Dict, Callable, TypeVar, Tuple, Type, Generic, Optional, Any
+)
+
 import yfinance as yf
 import pandas as pd
-from datetime import datetime, timedelta
 from dateutil.parser import parse
+from dotenv import load_dotenv
 from langchain.tools import tool
-from sec_tool.sec_financial_fiedls_definitions import FinancialNecessaryFields
 from langchain_community.agent_toolkits.polygon.toolkit import PolygonToolkit
 from langchain_community.utilities.polygon import PolygonAPIWrapper
-from dotenv import load_dotenv
+
+from sec_tool.sec_financial_fiedls_definitions import FinancialNecessaryFields
+
 
 # 환경 변수 로드
 load_dotenv()
@@ -47,7 +53,36 @@ class MarketDataTools:
         """Polygon API에서 제공하는 모든 도구를 반환합니다."""
         return polygon_tools
 
+    @staticmethod
+    @tool
+    def get_stock_news(ticker: Annotated[str, "Stock ticker symbol"]) -> Annotated[List[Dict[str, str]], "List of stock news details"]:
+        """
+        Retrieves the latest news related to the given stock ticker.
 
+        Returns:
+            - A list of dictionaries, each containing:
+                - title (str): The title of the news article.
+                - description (str): A brief description of the news content.
+                - pubDate (str): The publication date of the news article.
+                - url (str): The URL to the full news article.
+        """
+        stock = yf.Ticker(ticker)
+        news = stock.news if stock.news else []
+        
+        news_data = []
+        
+        for item in news:
+            if 'content' in item:
+                content = item['content']
+                news_item = {
+                    "title": content.get("title", "No Title Available"),
+                    "summary": content.get("summary", "No summary Available"),
+                    "pubDate": content.get("pubDate", "No Date Available"),
+                    "url": content.get("canonicalUrl", {}).get("url", "No URL Available")
+                }
+                news_data.append(news_item)
+
+        return news_data
 class FinancialDataTools:
     """기업 재무 데이터를 다루는 도구 클래스"""
 
