@@ -7,7 +7,12 @@ from langgraph.prebuilt import create_react_agent
 from langgraph.graph import StateGraph, MessagesState, START, END
 from sec_tool.market_data_tool import MarketDataTools, FinancialDataTools
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
+from dotenv import load_dotenv
+import os 
 
+load_dotenv(dotenv_path=".env") 
+
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Streamlit UI 설정
 st.set_page_config(page_title="FinBrain", layout="wide")
@@ -61,7 +66,8 @@ with st.sidebar:
             st.rerun()  # 즉시 채팅 불러오기
 
 # OpenAI LLM 설정
-llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18")
+llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18",
+                 api_key=openai_api_key)
 
 # 검색 에이전트 설정
 news_and_sentiment_retrieval_agent = create_react_agent(
