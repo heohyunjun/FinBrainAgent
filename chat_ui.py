@@ -10,13 +10,22 @@ from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 from dotenv import load_dotenv
 import os 
 
-load_dotenv(dotenv_path=".env") 
+load_dotenv() 
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Streamlit UI 설정
 st.set_page_config(page_title="FinBrain", layout="wide")
 st.title("FinBrain")
+
+st.markdown("""
+    <style>
+    /* 오른쪽 상단의 상태 표시 숨기기 */
+    [data-testid="stStatusWidget"] {
+        display: none;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
 # 채팅 히스토리 저장용 세션 상태 초기화
 if "history" not in st.session_state:
