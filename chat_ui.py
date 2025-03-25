@@ -10,12 +10,15 @@ from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 from dotenv import load_dotenv
 from utils.st_auth import check_token_auth
 import os 
+from data_team_subgraph import graph as main_graph
 
 load_dotenv() 
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
-    
+class AgentState(MessagesState):
+    query: str
+
 # Streamlit UI 설정
 st.set_page_config(page_title="FinBrain", layout="wide")
 st.title("FinBrain")
@@ -78,28 +81,6 @@ with st.sidebar:
             st.session_state.messages = chat["messages"]
             st.rerun()  # 즉시 채팅 불러오기
 
-# OpenAI LLM 설정
-llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18",
-                 api_key=openai_api_key)
-
-# 검색 에이전트 설정
-news_and_sentiment_retrieval_agent = create_react_agent(
-    llm,
-    tools=[MarketDataTools.get_stock_news, MarketDataTools.get_websearch_tool()],
-    state_modifier="You are an expert in finding financial news and analyst opinions. Provide facts only, not opinions."
-)
-
-def web_search_node(state: MessagesState):
-    """웹 검색 에이전트를 실행하는 노드"""
-    return news_and_sentiment_retrieval_agent.invoke(state)
-
-# LangGraph 상태 그래프 구성
-builder = StateGraph(MessagesState)
-builder.add_node("web_search", web_search_node)
-builder.add_edge(START, "web_search")
-builder.add_edge("web_search", END)
-
-graph = builder.compile()
 
 def get_role(message):
     """메시지 역할 변환"""
@@ -131,8 +112,9 @@ if query:
 
         # `st.status()`를 graph.invoke() 바깥으로 이동
         with st.status("Processing request...", expanded=True):
-            state = MessagesState(messages=st.session_state.messages)
-            response = graph.invoke(state)
+            latest_question = query.strip()
+            state = AgentState(messages=st.session_state.messages, query=latest_question)
+            response = main_graph.invoke(state)
 
         st.session_state.messages = response["messages"]
         ui_messages = [msg for msg in st.session_state.messages if not isinstance(msg, ToolMessage)]

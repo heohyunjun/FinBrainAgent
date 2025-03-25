@@ -16,7 +16,7 @@ openai_api_key = os.getenv("OPENAI_API_KEY")
 
 
 class FinancialReportState(MessagesState):
-    initial_query: str
+    query: str
 
 report_llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18",
                         api_key=openai_api_key)
@@ -58,7 +58,7 @@ reporter_system_prompt = PromptTemplate.from_template(
     </Collected Data>
     
     <User Question>
-    {initial_query} 
+    {query} 
     </User Question>"""
 )
 
@@ -75,7 +75,8 @@ def reporter_node(state: FinancialReportState):
     Returns:
         dict: 분석 결과 메시지를 포함하는 딕셔너리를 반환
     """
-    result = reporter_chain.invoke({"messages" : state['messages'], "initial_query" : state["messages"][0].content})
+    query = state['query']
+    result = reporter_chain.invoke({"messages" : state['messages'], "query" : query})
 
     return {'messages': [result]}
 
