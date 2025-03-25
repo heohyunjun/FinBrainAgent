@@ -98,7 +98,7 @@ def market_data_retrieval_node(state: AgentState) -> Command[Literal["data_retri
         goto='data_retrieval_leader'
     )
 
-# %%
+
 economic_data_prompt = f"""You are an expert in macroeconomic data retrieval.
 Your mission is to collect accurate and up-to-date macroeconomic indicators from reliable sources.
 You have access to the following tools: [get_core_cpi_data, get_core_pce_data, get_personal_income_data,get_mortgage_rate_data, get_unemployment_rate_data, get_jobless_claims_data.]
@@ -298,7 +298,7 @@ def data_cleansing_node(state: AgentState) -> Command[Literal["supervisor"]]:
         goto='supervisor'
     )
 
-# %%
+
 supervisor_members = ["data_retrieval_leader", "general_team_leader"]
 supervisor_options_for_next = supervisor_members + ["FINISH"]
 
