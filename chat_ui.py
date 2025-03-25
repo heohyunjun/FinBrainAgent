@@ -8,15 +8,19 @@ from langgraph.graph import StateGraph, MessagesState, START, END
 from sec_tool.market_data_tool import MarketDataTools, FinancialDataTools
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 from dotenv import load_dotenv
+from utils.st_auth import check_token_auth
 import os 
 
 load_dotenv() 
 
 openai_api_key = os.getenv("OPENAI_API_KEY")
 
+    
 # Streamlit UI 설정
 st.set_page_config(page_title="FinBrain", layout="wide")
 st.title("FinBrain")
+
+token = check_token_auth()
 
 st.markdown("""
     <style>
