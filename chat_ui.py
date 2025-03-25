@@ -18,8 +18,8 @@ class AgentState(MessagesState):
     query: str
 
 # Streamlit UI 설정
-st.set_page_config(page_title="FinBrain - AI 금융 어드바이저", layout="wide")
-st.title("FinBrain")
+st.set_page_config(page_title="FinBrain", layout="wide")
+st.title("FinBrain - AI 금융 어드바이저")
 
 token = check_token_auth()
 
