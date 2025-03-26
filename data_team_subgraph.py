@@ -38,11 +38,14 @@ print(utils.tracing_is_enabled())
 
 current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+
 class AgentState(MessagesState):
     query: str
 
 
+
 llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18")
+
 
 news_and_sentiment_retrieval_prompt = f"""You are an expert in finding financial news and analyst opinions. 
 Provide fact only not opinions
@@ -73,6 +76,7 @@ def news_and_sentiment_retrieval_node(state: AgentState) -> Command[Literal["dat
         update={'messages': [HumanMessage(content=result['messages'][-1].content, name='news_and_sentiment_retrieval')]},
         goto='data_retrieval_leader'
     )
+
 
 
 
@@ -125,6 +129,8 @@ def economic_data_retrieval_node(state: AgentState) -> Command[Literal["data_ret
         goto='data_retrieval_leader'
     )
 
+
+# 도구 리스트
 financial_statement_retrieval_tools = [FinancialDataTools.get_income_statement, FinancialDataTools.get_financial_event_filings]
 
 # 단일 에이전트 정의
@@ -199,10 +205,12 @@ data_retrieval_leader_system_prompt = (
     "- financial_statement_retrieval: Handles income statements, financial statements, and SEC filings.\n"
     "- insider_tracker_research: Handles insider trading filings and insider transactions.\n"
     "- economic_data_retrieval: Handles macroeconomic data\n"
-    "Given the user request, strictly select ONLY ONE most suitable worker to act next based on the task description above. "
-    "When finished, respond with FINISH."
+    "Given the user request, strictly select ONLY ONE most suitable worker to act next based on the task description above.\n"
+    "If the request is too vague and lacks specific details, set 'is_vague' to true and 'next' to 'FINISH', "
+    "and optionally provide a clarification request in 'response'. "
+    "When finished normally, set 'is_vague' to false and 'next' to 'FINISH'. "
+    "Do not fill 'response' unless explicitly needed for clarification."
 )
-
 
 
 # ChatPromptTemplate 생성
@@ -213,18 +221,18 @@ data_retrieval_leader_prompt = ChatPromptTemplate.from_messages(
         (
             "system",
             "Given the conversation above, who should act next? "
-            "Or should we FINISH? Select one of: {options}",
+            "Or should we FINISH? Select one of: {options}. "
+            "Return a JSON with 'next', 'is_vague', and optionally 'response' if vague. "
+            "If not vague and no clarification is needed, leave 'response' empty."
         ),
     ]
 ).partial(options=str(data_retrieval_options_for_next), members=", ".join(data_retrieval_team_members))
 
-
 class DataTeamRouter(TypedDict):
-    """Worker to route to next. If no workers needed, route to FINISH."""
-
+    """Worker to route to next. If no workers needed or question is vague, route to FINISH."""
     next: Literal[*data_retrieval_options_for_next]
-
-
+    is_vague: bool  # 질문이 모호한지 여부
+    response: Optional[str]
 
 def data_retrieval_leader_node(state: AgentState) -> Command[Literal[*data_retrieval_team_members, "data_cleansing"]]:
     """
@@ -243,11 +251,19 @@ def data_retrieval_leader_node(state: AgentState) -> Command[Literal[*data_retri
     data_retrieval_team_chain = data_retrieval_leader_prompt | llm.with_structured_output(DataTeamRouter)
     response= data_retrieval_team_chain.invoke(state)
 
+
     goto = response["next"]
-    if goto == "FINISH":
-        goto = "data_cleansing"
+    if response["is_vague"]:
+        # 모호한 경우 reporter로 이동, response가 있으면 메시지 추가
+        return Command(
+            update={'messages': [HumanMessage(content=response["response"], name='data_retrieval_leader')] if response["response"] else None},
+            goto='reporter'
+        )
+    elif goto == "FINISH":
+        goto = "data_cleansing"  # 정상 종료 시
 
     return Command(goto=goto)
+
 
 
 data_cleansing_system_prompt = (
@@ -298,19 +314,18 @@ def data_cleansing_node(state: AgentState) -> Command[Literal["supervisor"]]:
         goto='supervisor'
     )
 
-
 supervisor_members = ["data_retrieval_leader", "general_team_leader"]
 supervisor_options_for_next = supervisor_members + ["FINISH"]
 
 supervisor_system_prompt = (
-    "You are a supervisor tasked with managing a conversation between the following specialized workers: {members}.\n"
+    "You are a supervisor tasked with overseeing a conversation in an AI agent service designed to provide financial and investment advice. "
+    "Your role is to act as the central coordinator, directing user requests to the appropriate specialized workers: {members}.\n"
     "Each worker handles specific tasks:\n"
     "- 'data_team_leader':  role is responsible for collecting and refining the data required to answer user questions.\n"
     "- 'general_team_leader': role is responsible for handling general knowledge questions outside finance or investing.\n"
     "Given the user request, strictly select ONLY ONE most suitable worker to act next based on the task description above. "
     "When finished, respond with FINISH."
 )
-
 
 
 # ChatPromptTemplate 생성
@@ -331,6 +346,7 @@ class Router(TypedDict):
     """Worker to route to next. If no workers needed, route to FINISH."""
 
     next: Literal[*supervisor_options_for_next]
+    
 
 
 
@@ -374,5 +390,6 @@ graph_builder.add_node("general_team_leader", general_graph)
 graph_builder.add_edge(START, "supervisor")
 graph_builder.add_edge("reporter", END)
 graph_builder.add_edge("general_team_leader", END)
+
 graph = graph_builder.compile()
 
