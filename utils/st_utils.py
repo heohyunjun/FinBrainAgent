@@ -1,6 +1,7 @@
 import os
 import streamlit as st
 from dotenv import load_dotenv
+from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 
 def check_token_auth():
     load_dotenv() 
@@ -13,3 +14,13 @@ def check_token_auth():
         st.stop()
 
     return token  # 유효한 토큰을 반환할 수도 있음
+
+
+
+def get_role(message):
+    """메시지 역할 변환"""
+    if isinstance(message, AIMessage):
+        return "assistant"
+    elif isinstance(message, HumanMessage):
+        return "user"
+    return "system"

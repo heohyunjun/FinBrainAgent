@@ -7,7 +7,7 @@ from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from langgraph.graph import MessagesState
 from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 
-from utils.st_auth import check_token_auth
+from utils.st_utils import check_token_auth, get_role
 from data_team_subgraph import graph as main_graph
 
 load_dotenv() 
@@ -79,14 +79,6 @@ with st.sidebar:
             st.session_state.messages = chat["messages"]
             st.rerun()  # 즉시 채팅 불러오기
 
-
-def get_role(message):
-    """메시지 역할 변환"""
-    if isinstance(message, AIMessage):
-        return "assistant"
-    elif isinstance(message, HumanMessage):
-        return "user"
-    return "system"
 
 # 기존 대화 기록 표시
 for message in st.session_state.messages:
