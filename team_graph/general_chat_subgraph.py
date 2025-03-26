@@ -117,7 +117,7 @@ def general_query_node(state: GeneralState):
     Returns:
         dict: 분석 결과 메시지를 포함하는 딕셔너리를 반환
     """
-    print(state)
+
     query = state['query']
     
     general_answer = general_query_chain.invoke({"question" : query})
