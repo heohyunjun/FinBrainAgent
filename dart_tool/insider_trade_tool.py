@@ -11,6 +11,8 @@ class DartBaseAPI:
     """
     DART_API_KEY = os.getenv("DART_API_KEY")
     DART_BASE_URL = "https://opendart.fss.or.kr/api"
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    CORP_LIST_FILE = os.path.join(BASE_DIR, "corp_list.pkl")
 
     @staticmethod
     def _fetch_dart_data(endpoint: str, params: dict) -> dict:
@@ -39,7 +41,46 @@ class DartBaseAPI:
             print(f"요청 실패: {e}")
             return {"status": "error", "message": str(e)}
 
+    @staticmethod
+    def return_corp_code(
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None
+    ) -> Optional[str]:
+        """
+        종목코드 또는 회사명을 통해 기업 고유번호(corp_code)를 반환합니다.
 
+        Args:
+            stock_code (Optional[str]): 6자리 종목코드 (예: "005930")
+            corp_name (Optional[str]): 회사명 (예: "삼성전자")
+
+        Returns:
+            Optional[str]: 고유번호(corp_code) 또는 None
+        """
+        if stock_code is None and corp_name is None:
+            print("종목코드 또는 회사명 중 하나는 반드시 입력해야 합니다.")
+            return None
+
+        try:
+            df = pd.read_pickle(DartBaseAPI.CORP_LIST_FILE)
+
+            if stock_code:
+                result = df[df['stock_code'] == stock_code]
+            elif corp_name:
+                clean_name  = corp_name.strip().replace(" ", "")
+                df['corp_name_cleaned'] = df['corp_name'].str.replace(" ", "")
+                result = df[df['corp_name_cleaned'] == clean_name ]
+            else:
+                return None
+
+            if not result.empty:
+                return result.iloc[0]['corp_code']
+            else:
+                print(f"'{stock_code or corp_name}'에 해당하는 기업을 찾을 수 없습니다.")
+                return None
+
+        except Exception as e:
+            print(f"기업코드 조회 중 오류 발생: {str(e)}")
+            return None
 class DARTExecutiveShareholdingAPI(DartBaseAPI):
     """
     임원 및 주요주주 소유 보고 API를 처리하는 클래스.
