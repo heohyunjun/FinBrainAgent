@@ -152,7 +152,6 @@ class DARTMajorStockReportAPI(DartBaseAPI):
     """
     DART 대량보유 상황보고서(majorstock) API를 처리하는 클래스.
     """
-
     def _get_major_stock_reports(
         self,
         stock_code: Optional[str] = None,
@@ -208,21 +207,27 @@ class DARTMajorStockReportAPI(DartBaseAPI):
             reference_date=reference_date
         )
 
+        # 수치 컬럼 전처리
+        for col in ["stkqy", "stkqy_irds"]:
+            df[col] = df[col].astype(str).str.replace(",", "", regex=False).astype(int)
+        for col in ["stkrt", "stkrt_irds"]:
+            df[col] = df[col].astype(float)
+
         # 수치 필터
         if min_ratio is not None:
-            df = df[df["stkrt"].astype(float) >= min_ratio]
+            df = df[df["stkrt"] >= min_ratio]
         if min_ratio_change is not None:
-            df = df[df["stkrt_irds"].astype(float) >= min_ratio_change]
+            df = df[df["stkrt_irds"] >= min_ratio_change]
         if min_share_count is not None:
-            df = df[df["stkqy"].astype(int) >= min_share_count]
+            df = df[df["stkqy"] >= min_share_count]
         if min_share_change is not None:
-            df = df[df["stkqy_irds"].astype(int) >= min_share_change]
+            df = df[df["stkqy_irds"] >= min_share_change]
         if max_share_change is not None:
-            df = df[df["stkqy_irds"].astype(int) <= max_share_change]
+            df = df[df["stkqy_irds"] <= max_share_change]
 
         df = df.sort_values(by="rcept_dt", ascending=False)
 
-        DROP_FIELDS= ["rcept_no", "ctr_stkqy","ctr_stkrt"]
+        DROP_FIELDS = ["rcept_no", "ctr_stkqy", "ctr_stkrt"]
         df = df.drop(columns=DROP_FIELDS, errors="ignore")
 
         return df.head(limit).reset_index(drop=True)
