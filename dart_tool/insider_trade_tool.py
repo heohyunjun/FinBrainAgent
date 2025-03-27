@@ -99,8 +99,8 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
         내부자 소유 보고서 데이터 조회 (필터링 포함).
         종목코드 또는 회사명을 통해 기업코드를 자동 추론합니다.
         """
-        # 기업코드 리턴턴
-        corp_code = DartBaseAPI.resolve_corp_code(stock_code=stock_code, corp_name=corp_name)
+        # 기업코드 리턴
+        corp_code = DartBaseAPI.return_corp_code(stock_code=stock_code, corp_name=corp_name)
         if corp_code is None:
             print("기업코드 조회 실패 - 유효한 종목코드 또는 회사명을 입력하세요.")
             return pd.DataFrame()
