@@ -88,7 +88,8 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
 
     @staticmethod
     def _get_executive_shareholding(
-        corp_code: str,
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         reference_date: Optional[str] = None,
@@ -96,7 +97,14 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
     ) -> pd.DataFrame:
         """
         내부자 소유 보고서 데이터 조회 (필터링 포함).
+        종목코드 또는 회사명을 통해 기업코드를 자동 추론합니다.
         """
+        # 기업코드 리턴턴
+        corp_code = DartBaseAPI.resolve_corp_code(stock_code=stock_code, corp_name=corp_name)
+        if corp_code is None:
+            print("기업코드 조회 실패 - 유효한 종목코드 또는 회사명을 입력하세요.")
+            return pd.DataFrame()
+        
         endpoint = "elestock.json"
         params = {"corp_code": corp_code}
         data = DartBaseAPI._fetch_dart_data(endpoint, params)
@@ -128,7 +136,8 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
     @staticmethod
     @tool
     def get_executive_shareholding_tool(
-        corp_code: str,
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         reference_date: Optional[str] = None,
@@ -138,7 +147,8 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
         LangGraph용 툴 메서드: 내부자 거래 내역 반환
         """
         df = DARTExecutiveShareholdingAPI._get_executive_shareholding(
-            corp_code=corp_code,
+            stock_code=stock_code,
+            corp_name=corp_name,
             start_date=start_date,
             end_date=end_date,
             reference_date=reference_date,
