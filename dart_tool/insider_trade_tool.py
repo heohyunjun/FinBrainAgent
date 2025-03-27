@@ -144,7 +144,20 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
         limit: int = 20
     ) -> list[dict]:
         """
-        LangGraph용 툴 메서드: 내부자 거래 내역 반환
+        국내 기업업 임원 및 주요주주 소유 현황 API를 호출하여 내부자 보유 지분 데이터를 조회합니다.
+
+        Args:
+            stock_code (str, optional): 종목코드. 회사명 대신 사용 가능. 둘 중 하나는 반드시 제공해야 합니다.
+            corp_name (str, optional): 회사명. 종목코드가 없을 경우 사용. 둘 중 하나는 반드시 제공해야 합니다.
+            start_date (str, optional): 조회 시작 날짜 (형식: "YYYY-MM-DD")
+            end_date (str, optional): 조회 종료 날짜 (형식: "YYYY-MM-DD")
+            reference_date (str, optional): 현재 시간 
+
+            limit (int, optional): 반환할 결과 최대 개수. 기본값은 20개.
+
+        Returns:
+            list[dict]: 내부자 주식 보유 및 변동 내역이 담긴 딕셔너리 리스트.
+                        각 항목은 보고자, 임원직위, 소유 주식 수, 증감 내역 등을 포함함.
         """
         df = DARTExecutiveShareholdingAPI._get_executive_shareholding(
             stock_code=stock_code,
