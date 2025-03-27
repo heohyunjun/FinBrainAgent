@@ -37,6 +37,9 @@ if "history" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []  # UI 표시용: (role, content) 튜플 리스트
+
 if "load_chat" not in st.session_state:
     st.session_state.load_chat = None
 
@@ -53,14 +56,17 @@ with st.sidebar:
                     "id": str(uuid.uuid4()),
                     "title": first_user_message,
                     "messages": st.session_state.messages,
+                    "chat_messages": st.session_state.chat_messages,  # UI 메시지도 저장
                 }
                 st.session_state.history.insert(0, chat_entry)
             else:
                 for chat in st.session_state.history:
                     if chat["id"] == st.session_state.load_chat:
                         chat["messages"] = st.session_state.messages
+                        chat["chat_messages"] = st.session_state.chat_messages
                         break
         st.session_state.messages = []
+        st.session_state.chat_messages = []
         st.session_state.load_chat = None
         st.rerun()
 
@@ -69,25 +75,24 @@ with st.sidebar:
         if st.button(f"{chat['title']}", key=f"chat_{idx}"):
             st.session_state.load_chat = chat["id"]
             st.session_state.messages = chat["messages"]
+            st.session_state.chat_messages = chat["chat_messages"]
             st.rerun()
 
-# 기존 대화 기록 표시
-for message in st.session_state.messages:
-    if isinstance(message, ToolMessage):
-        continue
-    with st.chat_message(get_role(message)):
-        st.write(message.content)
+
+# 기존 채팅 메시지 표시
+for role, content in st.session_state.chat_messages:
+    with st.chat_message(role):
+        st.write(content)
 
 # 사용자 입력 받기
 query = st.chat_input("검색할 내용을 입력하세요:")
 
 if query:
-    user_message = HumanMessage(content=query)
-    st.session_state.messages.append(user_message)
-
-    # 사용자 메시지 즉시 표시
+    # 사용자 메시지 즉시 표시 및 상태에 추가
     with st.chat_message("user"):
         st.write(query)
+    st.session_state.messages.append(HumanMessage(content=query))
+    st.session_state.chat_messages.append(("user", query))
 
     # AI 응답 생성 및 표시
     with st.chat_message("assistant"):
@@ -97,8 +102,11 @@ if query:
             state = AgentState(messages=st.session_state.messages, query=latest_question)
             response = main_graph.invoke(state)
 
- 
-        st.session_state.messages = response["messages"]
-        assistant_message = response["messages"][-1]  # 최신 응답만 가져오기
-        if not isinstance(assistant_message, ToolMessage):
-            st.write(assistant_message.content)  # 응답 출력
+            # LangGraph 상태 업데이트
+            st.session_state.messages = response["messages"]
+
+            # UI용 메시지 추출 (ToolMessage 제외)
+            assistant_content = response["messages"][-1].content
+            st.session_state.chat_messages.append(("assistant", assistant_content))
+
+        st.write(assistant_content)
