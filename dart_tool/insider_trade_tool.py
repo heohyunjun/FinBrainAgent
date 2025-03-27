@@ -3,72 +3,63 @@ import requests
 import pandas as pd
 from typing import Optional
 from langchain.tools import tool
+from datetime import datetime, timedelta
 
 
 class DartBaseAPI:
     """
     DART API의 공통 로직을 처리하는 기반 클래스.
     """
-    DART_API_KEY = os.getenv("DART_API_KEY")
-    DART_BASE_URL = "https://opendart.fss.or.kr/api"
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    CORP_LIST_FILE = os.path.join(BASE_DIR, "corp_list.pkl")
 
-    @staticmethod
-    def _fetch_dart_data(endpoint: str, params: dict) -> dict:
-        """
-        공통적인 DART API 요청 메서드.
-        
-        Args:
-            endpoint (str): API 엔드포인트 경로
-            params (dict): API 요청 파라미터
+    def __init__(
+        self,
+        corp_list_file: Optional[str] = None
+    ):
+        self.api_key = os.getenv("DART_API_KEY")
+        self.base_url = "https://opendart.fss.or.kr/api"
+        self.corp_list_file = corp_list_file or os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "corp_list.pkl"
+        )
 
-        Returns:
-            dict: API 응답 JSON 데이터
-        """
-        if DartBaseAPI.DART_API_KEY is None:
+        if self.api_key is None:
             raise ValueError("DART_API_KEY 환경변수가 설정되지 않았습니다.")
 
-        params['crtfc_key'] = DartBaseAPI.DART_API_KEY
-        url = f"{DartBaseAPI.DART_BASE_URL}/{endpoint}"
+    def _fetch_dart_data(self, endpoint: str, params: dict) -> dict:
+        """
+        공통적인 DART API 요청 메서드.
+        """
+        params['crtfc_key'] = self.api_key
+        url = f"{self.base_url}/{endpoint}"
 
         try:
             response = requests.get(url, params=params)
             response.raise_for_status()
-            data = response.json()
-            return data
+            return response.json()
         except requests.RequestException as e:
             print(f"요청 실패: {e}")
             return {"status": "error", "message": str(e)}
 
-    @staticmethod
     def return_corp_code(
+        self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None
     ) -> Optional[str]:
         """
         종목코드 또는 회사명을 통해 기업 고유번호(corp_code)를 반환합니다.
-
-        Args:
-            stock_code (Optional[str]): 6자리 종목코드 (예: "005930")
-            corp_name (Optional[str]): 회사명 (예: "삼성전자")
-
-        Returns:
-            Optional[str]: 고유번호(corp_code) 또는 None
         """
         if stock_code is None and corp_name is None:
             print("종목코드 또는 회사명 중 하나는 반드시 입력해야 합니다.")
             return None
 
         try:
-            df = pd.read_pickle(DartBaseAPI.CORP_LIST_FILE)
+            df = pd.read_pickle(self.corp_list_file)
 
             if stock_code:
                 result = df[df['stock_code'] == stock_code]
             elif corp_name:
-                clean_name  = corp_name.strip().replace(" ", "")
-                df['corp_name_cleaned'] = df['corp_name'].str.replace(" ", "")
-                result = df[df['corp_name_cleaned'] == clean_name ]
+                clean_name = corp_name.strip().replace(" ", "")
+                result = df[df['corp_name'].str.replace(" ", "") == clean_name]
             else:
                 return None
 
@@ -81,13 +72,40 @@ class DartBaseAPI:
         except Exception as e:
             print(f"기업코드 조회 중 오류 발생: {str(e)}")
             return None
+
+    def filter_by_dates(self, 
+        df: pd.DataFrame,
+        date_column: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        reference_date: Optional[str] = None
+    ) -> pd.DataFrame:
+        """
+        날짜 필터링을 수행하는 공통 메서드.
+        """
+        if date_column not in df.columns:
+            print(f"'{date_column}' 컬럼이 DataFrame에 존재하지 않습니다.")
+            return df
+
+        df[date_column] = pd.to_datetime(df[date_column], errors="coerce")
+
+        if start_date or end_date:
+            if start_date:
+                df = df[df[date_column] >= pd.to_datetime(start_date)]
+            if end_date:
+                df = df[df[date_column] <= pd.to_datetime(end_date)]
+        elif reference_date:
+            ref = pd.to_datetime(reference_date)
+            start = ref - timedelta(days=30)
+            df = df[(df[date_column] >= start) & (df[date_column] <= ref)]
+
+        return df
 class DARTExecutiveShareholdingAPI(DartBaseAPI):
     """
     임원 및 주요주주 소유 보고 API를 처리하는 클래스.
     """
 
-    @staticmethod
-    def _get_executive_shareholding(
+    def _get_executive_shareholding(self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
         start_date: Optional[str] = None,
@@ -100,14 +118,14 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
         종목코드 또는 회사명을 통해 기업코드를 자동 추론합니다.
         """
         # 기업코드 리턴
-        corp_code = DartBaseAPI.return_corp_code(stock_code=stock_code, corp_name=corp_name)
+        corp_code = self.return_corp_code(stock_code=stock_code, corp_name=corp_name)
         if corp_code is None:
             print("기업코드 조회 실패 - 유효한 종목코드 또는 회사명을 입력하세요.")
             return pd.DataFrame()
         
         endpoint = "elestock.json"
         params = {"corp_code": corp_code}
-        data = DartBaseAPI._fetch_dart_data(endpoint, params)
+        data = self._fetch_dart_data(endpoint, params)
 
         if data['status'] != '000':
             print(f"오류 발생: {data['status']} - {data['message']}")
@@ -115,17 +133,14 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
 
         df = pd.DataFrame(data['list'])
         df['rcept_dt'] = pd.to_datetime(df['rcept_dt'], errors='coerce')
-        # 날짜 필터 로직
-        if start_date or end_date:
-            if start_date:
-                df = df[df['rcept_dt'] >= pd.to_datetime(start_date)]
-            if end_date:
-                df = df[df['rcept_dt'] <= pd.to_datetime(end_date)]
 
-        elif reference_date:
-            ref = pd.to_datetime(reference_date)
-            start = ref - pd.Timedelta(days=30)
-            df = df[(df['rcept_dt'] >= start) & (df['rcept_dt'] <= ref)]
+        df = self.filter_by_dates(
+            df,
+            date_column="rcept_dt",
+            start_date=start_date,
+            end_date=end_date,
+            reference_date=reference_date
+        )
 
         # 정렬 및 필드 정리
         df = df.sort_values(by='rcept_dt', ascending=False)
@@ -133,38 +148,81 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
 
         return df.head(limit).reset_index(drop=True)
 
-    @staticmethod
-    @tool
-    def get_executive_shareholding_tool(
+class DARTMajorStockReportAPI(DartBaseAPI):
+    """
+    DART 대량보유 상황보고서(majorstock) API를 처리하는 클래스.
+    """
+
+    def _get_major_stock_reports(
+        self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
+        min_ratio: Optional[float] = None,
+        min_ratio_change: Optional[float] = None,
+        min_share_count: Optional[int] = None,
+        min_share_change: Optional[int] = None,
+        max_share_change: Optional[int] = None,
         start_date: Optional[str] = None,
         end_date: Optional[str] = None,
         reference_date: Optional[str] = None,
         limit: int = 20
-    ) -> list[dict]:
+    ) -> pd.DataFrame:
         """
-        국내 기업업 임원 및 주요주주 소유 현황 API를 호출하여 내부자 보유 지분 데이터를 조회합니다.
-
+        대량보유 상황 보고서 조회 도구 
         Args:
-            stock_code (str, optional): 종목코드. 회사명 대신 사용 가능. 둘 중 하나는 반드시 제공해야 합니다.
-            corp_name (str, optional): 회사명. 종목코드가 없을 경우 사용. 둘 중 하나는 반드시 제공해야 합니다.
-            start_date (str, optional): 조회 시작 날짜 (형식: "YYYY-MM-DD")
-            end_date (str, optional): 조회 종료 날짜 (형식: "YYYY-MM-DD")
+            stock_code (str, optional): 종목코드
+            corp_name (str, optional): 회사명
+            min_ratio (float, optional): 최소 보유비율
+            min_ratio_change (float, optional): 보유비율 증감 필터
+            min_share_count (int, optional): 최소 주식 보유 수
+            min_share_change (int, optional): 최소 주식 증가 수
+            max_share_change (int, optional): 최대 주식 감소 수
+            start_date (str, optional): 시작일
+            end_date (str, optional): 종료일
             reference_date (str, optional): 현재 시간 
-
-            limit (int, optional): 반환할 결과 최대 개수. 기본값은 20개.
+            limit (int, optional): 최대 결과 수
 
         Returns:
-            list[dict]: 내부자 주식 보유 및 변동 내역이 담긴 딕셔너리 리스트.
+            list[dict]: 필터링된 대량보유 보고서, 내부자 주식 보유 및 변동 내역이 담긴 딕셔너리 리스트.
                         각 항목은 보고자, 임원직위, 소유 주식 수, 증감 내역 등을 포함함.
         """
-        df = DARTExecutiveShareholdingAPI._get_executive_shareholding(
-            stock_code=stock_code,
-            corp_name=corp_name,
+        corp_code = self.return_corp_code(stock_code=stock_code, corp_name=corp_name)
+        if corp_code is None:
+            print("기업코드 조회 실패")
+            return pd.DataFrame()
+
+        endpoint = "majorstock.json"
+        params = {"corp_code": corp_code}
+        data = self._fetch_dart_data(endpoint, params)
+
+        if data["status"] != "000":
+            print(f"오류 발생: {data['status']} - {data['message']}")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data["list"])
+        df = self.filter_by_dates(
+            df,
+            date_column="rcept_dt",
             start_date=start_date,
             end_date=end_date,
-            reference_date=reference_date,
-            limit=limit
+            reference_date=reference_date
         )
-        return df.to_dict(orient="records")
+
+        # 수치 필터
+        if min_ratio is not None:
+            df = df[df["stkrt"].astype(float) >= min_ratio]
+        if min_ratio_change is not None:
+            df = df[df["stkrt_irds"].astype(float) >= min_ratio_change]
+        if min_share_count is not None:
+            df = df[df["stkqy"].astype(int) >= min_share_count]
+        if min_share_change is not None:
+            df = df[df["stkqy_irds"].astype(int) >= min_share_change]
+        if max_share_change is not None:
+            df = df[df["stkqy_irds"].astype(int) <= max_share_change]
+
+        df = df.sort_values(by="rcept_dt", ascending=False)
+
+        DROP_FIELDS= ["rcept_no", "ctr_stkqy","ctr_stkrt"]
+        df = df.drop(columns=DROP_FIELDS, errors="ignore")
+
+        return df.head(limit).reset_index(drop=True)
