@@ -72,7 +72,7 @@ class Dart_TreasuryStockAcquisitionDecision_Necessary_Fields:
     AQ_PP: str = "aq_pp"  # 취득 목적 (예: "자기주식 취득을 통한 주주가치 제고")
     AQ_MTH: str = "aq_mth"  # 취득 방법 (예: "장내매수")
 
-class Dart_TreasuryStockAcquisitionDecision_Unnecessary_Fields:
+class Dart_TreasuryStockAcquisitionDecision_UnNecessary_Fields:
     """
     자기주식 취득 결정 API에서 분석에 불필요한 필드 정의.
     """
