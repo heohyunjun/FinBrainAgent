@@ -426,7 +426,7 @@ class DartTSDispostionAPI(DartTSDectisonBaseAPI):
         )
 
 
-class DartTSAcquisionTrustAPI(DartTSDectisonBaseAPI):
+class DartTSAcquisionTrustContractAPI(DartTSDectisonBaseAPI):
     """
     DART 자기주식취득 신탁계약 체결 결정 API(tsstkAqTrctrCnsDecsn)를 처리하는 클래스.
     """

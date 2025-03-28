@@ -3,7 +3,7 @@ from typing import Optional
 from insider_trade_tool import (
     DARTMajorStockReportAPI, DARTExecutiveShareholdingAPI, 
     DartTSDispostionAPI, DartTSAcquisionAPI,
-    DartTSAcquisionTrustAPI)
+    DartTSAcquisionTrustContractAPI)
 
 
 class DartToolRegistry:
@@ -17,7 +17,7 @@ class DartToolRegistry:
         self.major_stock_api = DARTMajorStockReportAPI()
         self.ts_disposal_api = DartTSDispostionAPI()
         self.ts_acquisition_api = DartTSAcquisionAPI()
-        self.ts_trust_acquisition_api = DartTSAcquisionTrustAPI()
+        self.ts_trust_acquisition_api = DartTSAcquisionTrustContractAPI()
 
     @tool
     def get_executive_shareholding_tool(
