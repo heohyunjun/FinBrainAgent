@@ -41,3 +41,50 @@ class Dart_TrustStockAcquisitionDecision_Unnecessary_Fields:
     EAQ_ESTK_RT = "eaq_estk_rt"                  # 기타취득 기타주식 비율
     
 ########################################################
+
+
+########  자기 주식 취득 신탁 해지 결정 ########
+class Dart_TreasuryStockTrustCancel_Necessary_Fields:
+    """
+    자기주식취득 신탁계약 해지 결정 API 응답 중 분석에 필요한 필드 정의 
+    """
+
+    COMPANY: str = "corp_name"  # 회사명 (예: "신한지주", str)
+    BOARD_DATE: str = "bddd"  # 이사회 결의일 (예: "2019년 09월 09일" 또는 "-", str → datetime)
+    
+    CONTRACT_AMOUNT_BEFORE: str = "ctr_prc_bfcc"  # 계약금액(해지 전) (예: "400,000,000,000", str → int)
+    CONTRACT_AMOUNT_AFTER: str = "ctr_prc_atcc"  # 계약금액(해지 후) (예: "0", str → int)
+    
+    CONTRACT_PERIOD_START: str = "ctr_pd_bfcc_bgd"  # 해지 전 계약 시작일 (예: "2019년 05월 13일", str → datetime)
+    CONTRACT_PERIOD_END: str = "ctr_pd_bfcc_edd"  # 해지 전 계약 종료일 (예: "2019년 11월 13일", str → datetime)
+
+    CANCEL_PURPOSE: str = "cc_pp"  # 해지 목적 (예: "계약기간 만료에 따른 해지", str)
+    CANCEL_INSTITUTION: str = "cc_int"  # 해지 기관 (예: "삼성증권(Samsung Securities Co., Ltd.)", str)
+    CANCEL_DATE: str = "cc_prd"  # 해지 예정일자 (예: "2019년 11월 13일", str → datetime)
+
+    RETURN_METHOD: str = "tp_rm_atcc"  # 해지 후 신탁재산 반환방법 (예: "현금 및 실물(자사주) 반환", str)
+
+class Dart_TreasuryStockTrustCancel_Unnecessary_Fields:
+    """
+    자기주식취득 신탁계약 해지 결정 API 응답 중 분석에 불필요한 필드 정의
+    """
+
+    RECEIPT_NO: str = "rcept_no"  # 접수번호 (예: "20191113000578", str)
+    CORP_CLASS: str = "corp_cls"  # 법인구분 (예: "Y", str)
+    CORP_CODE: str = "corp_code"  # 고유번호 (예: "00382199", str)
+
+    AQ_WTN_DIV_OSTK: str = "aq_wtn_div_ostk"  # 해지 전 보유 주식 수 (보통주식) (예: "9,214,206", str)
+    AQ_WTN_DIV_OSTK_RT: str = "aq_wtn_div_ostk_rt"  # 보통주식 비율 (%) (예: "1.94", str)
+    AQ_WTN_DIV_ESTK: str = "aq_wtn_div_estk"  # 해지 전 기타주식 수량 (예: "-", str)
+    AQ_WTN_DIV_ESTK_RT: str = "aq_wtn_div_estk_rt"  # 기타주식 비율 (%) (예: "-", str)
+
+    EAQ_OSTK: str = "eaq_ostk"  # 기타취득 보통주식 수량 (예: "-", str)
+    EAQ_OSTK_RT: str = "eaq_ostk_rt"  # 기타취득 보통주식 비율 (%) (예: "-", str)
+    EAQ_ESTK: str = "eaq_estk"  # 기타취득 기타주식 수량 (예: "-", str)
+    EAQ_ESTK_RT: str = "eaq_estk_rt"  # 기타취득 기타주식 비율 (%) (예: "-", str)
+
+    OUTSIDE_DIR_PRESENT: str = "od_a_at_t"  # 사외이사 참석 인원 (예: "-", str)
+    OUTSIDE_DIR_ABSENT: str = "od_a_at_b"  # 사외이사 불참 인원 (예: "-", str)
+    AUDIT_ATTEND: str = "adt_a_atn"  # 감사 참석 여부 (예: "-", str)
+
+########################################################
