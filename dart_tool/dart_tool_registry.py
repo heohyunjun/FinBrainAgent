@@ -1,6 +1,6 @@
 from langchain.tools import tool
 from typing import Optional
-from insider_trade_tool import DARTMajorStockReportAPI, DARTExecutiveShareholdingAPI
+from insider_trade_tool import DARTMajorStockReportAPI, DARTExecutiveShareholdingAPI, DARTTreasuryStockDispositionDecisionAPI
 
 
 class DartToolRegistry:
@@ -10,8 +10,9 @@ class DartToolRegistry:
     """
 
     def __init__(self):
-        self.exec_api = DARTExecutiveShareholdingAPI()
-        self.major_api = DARTMajorStockReportAPI()
+        self.exec_shareholding_api = DARTExecutiveShareholdingAPI()
+        self.major_stock_api = DARTMajorStockReportAPI()
+        self.ts_disposal_api = DARTTreasuryStockDispositionDecisionAPI()
 
     @tool
     def get_executive_shareholding_tool(
@@ -29,8 +30,8 @@ class DartToolRegistry:
         Args:
             stock_code (str, optional): 종목코드
             corp_name (str, optional): 회사명
-            start_date (str, optional): 조회 시작일
-            end_date (str, optional): 조회 종료일
+            start_date (str): 조회 시작일 ("YYYY-MM-DD")
+            end_date (str): 조회 종료일 ("YYYY-MM-DD")
             reference_date (str, optional): 현재 시간 
             limit (int, optional): 최대 결과 수
 
@@ -73,8 +74,8 @@ class DartToolRegistry:
             min_share_count (int, optional): 최소 주식 보유 수
             min_share_change (int, optional): 최소 주식 증가 수
             max_share_change (int, optional): 최대 주식 감소 수
-            start_date (str, optional): 시작일
-            end_date (str, optional): 종료일
+            start_date (str): 조회 시작일 ("YYYY-MM-DD")
+            end_date (str): 조회 종료일 ("YYYY-MM-DD")
             reference_date (str, optional): 현재 시간 
             limit (int, optional): 최대 결과 수
 
@@ -93,6 +94,38 @@ class DartToolRegistry:
             start_date=start_date,
             end_date=end_date,
             reference_date=reference_date,
+            limit=limit
+        )
+        return df.to_dict(orient="records")
+    
+
+    @tool
+    def get_treasury_stock_disposals_tool(
+        self,
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None,
+        start_date: str = None,
+        end_date: str = None,
+        limit: int = 100
+    ) -> list[dict]:
+        """
+        자기주식 처분 결정을 조회하는 LangGraph용 툴입니다.
+
+        Args:
+            stock_code (str, optional): 종목코드 (예: "005930")
+            corp_name (str, optional): 회사명 (예: "삼성전자")
+            start_date (str): 조회 시작일 ("YYYY-MM-DD")
+            end_date (str): 조회 종료일 ("YYYY-MM-DD")
+            limit (int, optional): 최대 결과 개수. 기본값은 20
+
+        Returns:
+            list[dict]: 자기주식 처분 결정 내역 리스트
+        """
+        df = self._get_treasury_stock_disposals(
+            stock_code=stock_code,
+            corp_name=corp_name,
+            start_date=start_date,
+            end_date=end_date,
             limit=limit
         )
         return df.to_dict(orient="records")
