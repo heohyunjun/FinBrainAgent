@@ -7,8 +7,12 @@ from datetime import datetime, timedelta
 
 from dart_tool.dart_treasury_stock_decision_field_definitions import (
     Dart_TreasuryStockDispositionDecision_UnNecessary_Fields as DTUF,
-    Dart_TreasuryStockAcquisitionDecision_UnNecessary_Fields as DTAUF
+    Dart_TreasuryStockAcquisitionDecision_UnNecessary_Fields as DTAUF,
     )
+
+from dart_tool.dart_treasury_stock_trust_field_definitions import(
+    Dart_TrustStockAcquisitionDecision_Unnecessary_Fields as DTTUF
+)
 
 class DartBaseAPI:
     """
@@ -104,6 +108,28 @@ class DartBaseAPI:
             df = df[(df[date_column] >= start) & (df[date_column] <= ref)]
 
         return df
+    
+    def resolve_date_range(
+        self,
+        start_date: Optional[str],
+        end_date: Optional[str],
+        reference_date: Optional[str]
+    ) -> tuple[Optional[pd.Timestamp], Optional[pd.Timestamp]]:
+        """
+        start_date, end_date, reference_date를 기준으로 조회 시작일과 종료일을 계산.
+        """
+        if start_date and end_date:
+            return pd.to_datetime(start_date), pd.to_datetime(end_date)
+
+        if start_date and reference_date:
+            return pd.to_datetime(start_date), pd.to_datetime(reference_date)
+
+        if not start_date and not end_date and reference_date:
+            ref = pd.to_datetime(reference_date)
+            return ref - timedelta(days=30), ref
+
+        print("날짜 정보가 부족합니다. 최소 start_date 또는 reference_date가 필요합니다.")
+        return None, None
 class DARTExecutiveShareholdingAPI(DartBaseAPI):
     """
     임원 및 주요주주 소유 보고 API를 처리하는 클래스.
@@ -124,7 +150,7 @@ class DARTExecutiveShareholdingAPI(DartBaseAPI):
         # 기업코드 리턴
         corp_code = self.return_corp_code(stock_code=stock_code, corp_name=corp_name)
         if corp_code is None:
-            print("기업코드 조회 실패 - 유효한 종목코드 또는 회사명을 입력하세요.")
+            print("기업코드 조회 실패")
             return pd.DataFrame()
         
         endpoint = "elestock.json"
@@ -237,21 +263,75 @@ class DARTMajorStockReportAPI(DartBaseAPI):
         return df.head(limit).reset_index(drop=True)
     
 
-class DARTTreasuryStockDispositionDecisionAPI(DartBaseAPI):
-    """
-    DART 자기주식 처분 결정 API(tsstkDpDecsn)를 처리하는 클래스.
-    """
 
-    def _get_treasury_stock_disposals(
+class DartTSDectisonBaseAPI(DartBaseAPI):
+    def _fetch_decision_data(
+        self,
+        endpoint: str,
+        date_column: str,
+        drop_fields: list[str],
+        stock_code: Optional[str],
+        corp_name: Optional[str],
+        start_date: Optional[str],
+        end_date: Optional[str],
+        reference_date: Optional[str],
+        date_format: str = "%Y년 %m월 %d일",
+        limit: int = 20
+    ) -> pd.DataFrame:
+        if not start_date and not end_date and not reference_date:
+            print("start_date, end_date, reference_date 중 하나는 필수입니다.")
+            return pd.DataFrame()
+
+        corp_code = self.return_corp_code(stock_code, corp_name)
+        if corp_code is None:
+            print("기업코드 조회 실패")
+            return pd.DataFrame()
+
+        start_dt, end_dt = self.resolve_date_range(start_date, end_date, reference_date)
+        if not start_dt or not end_dt:
+            return pd.DataFrame()
+
+        params = {
+            "corp_code": corp_code,
+            "bgn_de": start_dt.strftime("%Y%m%d"),
+            "end_de": end_dt.strftime("%Y%m%d")
+        }
+
+        data = self._fetch_dart_data(endpoint, params)
+        if data["status"] != "000":
+            print(f"오류 발생: {data['status']} - {data['message']}")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data["list"])
+        if date_column in df.columns:
+            df[date_column] = pd.to_datetime(df[date_column], format=date_format, errors="coerce")
+
+        df = self.filter_by_dates(
+            df,
+            date_column=date_column,
+            start_date=start_dt.strftime("%Y-%m-%d"),
+            end_date=end_dt.strftime("%Y-%m-%d"),
+            reference_date=None
+        )
+
+        df = df.drop(columns=drop_fields, errors="ignore")
+        df = df.sort_values(by=date_column, ascending=False)
+
+        return df.head(limit).reset_index(drop=True)
+
+
+class DartTSAcquisionAPI(DartTSDectisonBaseAPI):
+    def _get_treasury_stock_acquisitions(
         self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
-        start_date: str = None,
-        end_date: str = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        reference_date: Optional[str] = None,
         limit: int = 20
     ) -> pd.DataFrame:
         """
-        자기주식 처분 결정 내역을 반환
+        자기주식 취득 결정 내역을 반환
 
         Args:
             stock_code (Optional[str]): 종목코드
@@ -261,43 +341,54 @@ class DARTTreasuryStockDispositionDecisionAPI(DartBaseAPI):
             limit (int): 최대 리턴 개수
 
         Returns:
-            pd.DataFrame: 필터링된 자기주식 처분 결정 내역
+            pd.DataFrame: 필터링된 자기주식 취득 결정 내역
         """
-        # 날짜 필수 검사
-        if not start_date or not end_date:
-            print("시작일(start_date)과 종료일(end_date)은 필수")
-            return pd.DataFrame()
 
-        # 기업코드
-        corp_code = self.return_corp_code(stock_code=stock_code, corp_name=corp_name)
-        if corp_code is None:
-            print("기업코드 조회 실패")
-            return pd.DataFrame()
+        drop_fields = [
+            DTAUF.RECEIPT_NO,
+            DTAUF.CORP_CLASS,
+            DTAUF.CORP_CODE,
+            DTAUF.BROKER,
+            DTAUF.HOLD_BGN,
+            DTAUF.HOLD_END,
+            DTAUF.AQ_WTN_DIV_OSTK,
+            DTAUF.AQ_WTN_DIV_OSTK_RT,
+            DTAUF.AQ_WTN_DIV_ESTK,
+            DTAUF.AQ_WTN_DIV_ESTK_RT,
+            DTAUF.EAQ_OSTK,
+            DTAUF.EAQ_OSTK_RT,
+            DTAUF.EAQ_ESTK,
+            DTAUF.EAQ_ESTK_RT,
+            DTAUF.OUTSIDE_DIR_PRESENT,
+            DTAUF.OUTSIDE_DIR_ABSENT,
+            DTAUF.AUDIT_ATTEND,
+            DTAUF.DAILY_LIMIT_COMMON,
+            DTAUF.DAILY_LIMIT_ETC,
+        ]
 
-        # 날짜 포맷 변환
-        bgn_de = pd.to_datetime(start_date).strftime("%Y%m%d")
-        end_de = pd.to_datetime(end_date).strftime("%Y%m%d")
+        return self._fetch_decision_data(
+            endpoint="tsstkAqDecsn.json",
+            date_column="aq_dd",
+            drop_fields=drop_fields,
+            stock_code=stock_code,
+            corp_name=corp_name,
+            start_date=start_date,
+            end_date=end_date,
+            reference_date=reference_date,
+            limit=limit
+        )
 
-        endpoint = "tsstkDpDecsn.json"
-        params = {
-            "corp_code": corp_code,
-            "bgn_de": bgn_de,
-            "end_de": end_de
-        }
+class DartTSDispostionAPI(DartTSDectisonBaseAPI):
+    def _get_treasury_stock_disposals(
+        self,
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        reference_date: Optional[str] = None,
+        limit: int = 20
+    ) -> pd.DataFrame:
 
-        data = self._fetch_dart_data(endpoint, params)
-        print(data)
-
-        if data["status"] != "000":
-            print(f"오류 발생: {data['status']} - {data['message']}")
-            return pd.DataFrame()
-
-        df = pd.DataFrame(data["list"])
-
-        # 날짜 변환
-        df["dp_dd"] = pd.to_datetime(df["dp_dd"], format="%Y년 %m월 %d일", errors="coerce").dt.strftime("%Y-%m-%d")
-
-        # 불필요 필드 제거
         drop_fields = [
             DTUF.RECEIPT_NO,
             DTUF.CORP_CODE,
@@ -321,97 +412,81 @@ class DARTTreasuryStockDispositionDecisionAPI(DartBaseAPI):
             DTUF.EAQ_ESTK,
             DTUF.EAQ_ESTK_RT
         ]
-        df = df.drop(columns=drop_fields, errors="ignore")
-        df = df.sort_values(by="aq_dd", ascending=False)
 
-        return df.head(limit).reset_index(drop=True)
+        return self._fetch_decision_data(
+            endpoint="tsstkDpDecsn.json",
+            date_column="dp_dd",
+            drop_fields=drop_fields,
+            stock_code=stock_code,
+            corp_name=corp_name,
+            start_date=start_date,
+            end_date=end_date,
+            reference_date=reference_date,
+            limit=limit
+        )
 
 
-class DARTTreasuryStockAcquisitionDecisionAPI(DartBaseAPI):
+class DartTSAcquisionTrustAPI(DartTSDectisonBaseAPI):
     """
-    DART 자기주식 취득 결정 API(tsstkAqDecsn)를 처리하는 클래스.
+    DART 자기주식취득 신탁계약 체결 결정 API(tsstkAqTrctrCnsDecsn)를 처리하는 클래스.
     """
 
-    def _get_treasury_stock_acquisitions(
+    def _get_treasury_stock_trust_contracts(
         self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
-        start_date: str = None,
-        end_date: str = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        reference_date: Optional[str] = None,
         limit: int = 20
     ) -> pd.DataFrame:
         """
-        자기주식 취득 결정 내역을 반환
+        자기주식취득 신탁계약 체결 결정 내역을 반환
 
         Args:
             stock_code (Optional[str]): 종목코드
             corp_name (Optional[str]): 회사명
-            start_date (str): 검색 시작일자 (YYYY-MM-DD)
-            end_date (str): 검색 종료일자 (YYYY-MM-DD)
+            start_date (str, optional): 검색 시작일자 (YYYY-MM-DD)
+            end_date (str, optional): 검색 종료일자 (YYYY-MM-DD)
+            reference_date (str, optional): 현재시간
             limit (int): 최대 리턴 개수
 
         Returns:
-            pd.DataFrame: 필터링된 자기주식 취득 결정 내역
+            pd.DataFrame: 필터링된 자기주식 취득 신탁계약 체결 내역
         """
-
-        # 날짜 필수 검사
-        if not start_date or not end_date:
-            print("시작일(start_date)과 종료일(end_date)은 필수")
-            return pd.DataFrame()
-
-        # 기업코드 조회
-        corp_code = self.return_corp_code(stock_code=stock_code, corp_name=corp_name)
-        if corp_code is None:
-            print("기업코드 조회 실패")
-            return pd.DataFrame()
-
-        # 날짜 포맷 변환
-        bgn_de = pd.to_datetime(start_date).strftime("%Y%m%d")
-        end_de = pd.to_datetime(end_date).strftime("%Y%m%d")
-
-        endpoint = "tsstkAqDecsn.json"
-        params = {
-            "corp_code": corp_code,
-            "bgn_de": bgn_de,
-            "end_de": end_de
-        }
-
-        data = self._fetch_dart_data(endpoint, params)
-
-        if data["status"] != "000":
-            print(f"오류 발생: {data['status']} - {data['message']}")
-            return pd.DataFrame()
-
-        df = pd.DataFrame(data["list"])
-
-        # 날짜 포맷 변환
-        df["aq_dd"] = pd.to_datetime(df["aq_dd"], format="%Y년 %m월 %d일", errors="coerce").dt.strftime("%Y-%m-%d")
-
-        # 불필요 필드 제거
         drop_fields = [
-            DTAUF.RECEIPT_NO,
-            DTAUF.CORP_CLASS,
-            DTAUF.CORP_CODE,
-            DTAUF.BROKER,
-            DTAUF.HOLD_BGN,
-            DTAUF.HOLD_END,
-            DTAUF.AQ_WTN_DIV_OSTK,
-            DTAUF.AQ_WTN_DIV_OSTK_RT,
-            DTAUF.AQ_WTN_DIV_ESTK,
-            DTAUF.AQ_WTN_DIV_ESTK_RT,
-            DTAUF.EAQ_OSTK,
-            DTAUF.EAQ_OSTK_RT,
-            DTAUF.EAQ_ESTK,
-            DTAUF.EAQ_ESTK_RT,
-            DTAUF.OUTSIDE_DIR_PRESENT,
-            DTAUF.OUTSIDE_DIR_ABSENT,
-            DTAUF.AUDIT_ATTEND,
-            DTAUF.DAILY_LIMIT_COMMON,
-            DTAUF.DAILY_LIMIT_ETC,
-
+            DTTUF.RECEIPT_NO,
+            DTTUF.CORP_CLASS,
+            DTTUF.CORP_CODE,
+            DTTUF.OUTSIDE_DIR_PRESENT,
+            DTTUF.OUTSIDE_DIR_ABSENT,
+            DTTUF.AUDIT_ATTEND,
+            DTTUF.BROKER,
+            DTTUF.AQ_WTN_DIV_OSTK,
+            DTTUF.AQ_WTN_DIV_OSTK_RT,
+            DTTUF.AQ_WTN_DIV_ESTK,
+            DTTUF.AQ_WTN_DIV_ESTK_RT,
+            DTTUF.EAQ_OSTK,
+            DTTUF.EAQ_OSTK_RT,
+            DTTUF.EAQ_ESTK,
+            DTTUF.EAQ_ESTK_RT
         ]
 
-        df = df.drop(columns=drop_fields, errors="ignore")
-        df = df.sort_values(by="aq_dd", ascending=False)
+        df = self._fetch_decision_data(
+            endpoint="tsstkAqTrctrCnsDecsn.json",
+            date_column="bddd",
+            drop_fields=drop_fields,
+            stock_code=stock_code,
+            corp_name=corp_name,
+            start_date=start_date,
+            end_date=end_date,
+            reference_date=reference_date,
+            limit=limit
+        )
 
-        return df.head(limit).reset_index(drop=True)
+        # 추가 날짜 필드 파싱
+        for col in ["ctr_pd_bgd", "ctr_pd_edd", "ctr_cns_prd"]:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], format="%Y년 %m월 %d일", errors="coerce")
+
+        return df
