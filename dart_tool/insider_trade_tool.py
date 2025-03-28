@@ -5,7 +5,10 @@ from typing import Optional
 from langchain.tools import tool
 from datetime import datetime, timedelta
 
-from dart_tool.dart_treasury_stock_dispositon_field_definitions import Dart_TreasuryStockDispositionDecision_UnNecessary_Fields as DTUF
+from dart_tool.dart_treasury_stock_decision_field_definitions import (
+    Dart_TreasuryStockDispositionDecision_UnNecessary_Fields as DTUF,
+    Dart_TreasuryStockAcquisitionDecision_UnNecessary_Fields as DTAUF
+    )
 
 class DartBaseAPI:
     """
@@ -319,5 +322,96 @@ class DARTTreasuryStockDispositionDecisionAPI(DartBaseAPI):
             DTUF.EAQ_ESTK_RT
         ]
         df = df.drop(columns=drop_fields, errors="ignore")
+        df = df.sort_values(by="aq_dd", ascending=False)
 
-        return df.sort_values(by="dp_dd", ascending=False).head(limit).reset_index(drop=True)
+        return df.head(limit).reset_index(drop=True)
+
+
+class DARTTreasuryStockAcquisitionDecisionAPI(DartBaseAPI):
+    """
+    DART 자기주식 취득 결정 API(tsstkAqDecsn)를 처리하는 클래스.
+    """
+
+    def _get_treasury_stock_acquisitions(
+        self,
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None,
+        start_date: str = None,
+        end_date: str = None,
+        limit: int = 20
+    ) -> pd.DataFrame:
+        """
+        자기주식 취득 결정 내역을 반환
+
+        Args:
+            stock_code (Optional[str]): 종목코드
+            corp_name (Optional[str]): 회사명
+            start_date (str): 검색 시작일자 (YYYY-MM-DD)
+            end_date (str): 검색 종료일자 (YYYY-MM-DD)
+            limit (int): 최대 리턴 개수
+
+        Returns:
+            pd.DataFrame: 필터링된 자기주식 취득 결정 내역
+        """
+
+        # 날짜 필수 검사
+        if not start_date or not end_date:
+            print("시작일(start_date)과 종료일(end_date)은 필수")
+            return pd.DataFrame()
+
+        # 기업코드 조회
+        corp_code = self.return_corp_code(stock_code=stock_code, corp_name=corp_name)
+        if corp_code is None:
+            print("기업코드 조회 실패")
+            return pd.DataFrame()
+
+        # 날짜 포맷 변환
+        bgn_de = pd.to_datetime(start_date).strftime("%Y%m%d")
+        end_de = pd.to_datetime(end_date).strftime("%Y%m%d")
+
+        endpoint = "tsstkAqDecsn.json"
+        params = {
+            "corp_code": corp_code,
+            "bgn_de": bgn_de,
+            "end_de": end_de
+        }
+
+        data = self._fetch_dart_data(endpoint, params)
+
+        if data["status"] != "000":
+            print(f"오류 발생: {data['status']} - {data['message']}")
+            return pd.DataFrame()
+
+        df = pd.DataFrame(data["list"])
+
+        # 날짜 포맷 변환
+        df["aq_dd"] = pd.to_datetime(df["aq_dd"], format="%Y년 %m월 %d일", errors="coerce").dt.strftime("%Y-%m-%d")
+
+        # 불필요 필드 제거
+        drop_fields = [
+            DTAUF.RECEIPT_NO,
+            DTAUF.CORP_CLASS,
+            DTAUF.CORP_CODE,
+            DTAUF.BROKER,
+            DTAUF.HOLD_BGN,
+            DTAUF.HOLD_END,
+            DTAUF.AQ_WTN_DIV_OSTK,
+            DTAUF.AQ_WTN_DIV_OSTK_RT,
+            DTAUF.AQ_WTN_DIV_ESTK,
+            DTAUF.AQ_WTN_DIV_ESTK_RT,
+            DTAUF.EAQ_OSTK,
+            DTAUF.EAQ_OSTK_RT,
+            DTAUF.EAQ_ESTK,
+            DTAUF.EAQ_ESTK_RT,
+            DTAUF.OUTSIDE_DIR_PRESENT,
+            DTAUF.OUTSIDE_DIR_ABSENT,
+            DTAUF.AUDIT_ATTEND,
+            DTAUF.DAILY_LIMIT_COMMON,
+            DTAUF.DAILY_LIMIT_ETC,
+
+        ]
+
+        df = df.drop(columns=drop_fields, errors="ignore")
+        df = df.sort_values(by="aq_dd", ascending=False)
+
+        return df.head(limit).reset_index(drop=True)
