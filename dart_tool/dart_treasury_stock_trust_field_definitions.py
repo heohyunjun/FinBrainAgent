@@ -1,5 +1,5 @@
 ########  자기 주식 취득 신탁 계약 체결 ########
-class Dart_TreasuryStockTrustContractDecision_Necessary_Fields:
+class Dart_TreasuryStockTrustContract_Necessary_Fields:
     """
     자기주식취득 신탁계약 체결 결정 API 응답 중 필요한 필드 정의
     """
@@ -13,7 +13,7 @@ class Dart_TreasuryStockTrustContractDecision_Necessary_Fields:
     PLANNED_CONTRACT_DATE = "ctr_cns_prd"           # 계약체결 예정일자 (예: "2019년 05월 14일", str)
 
 
-class Dart_TrustStockAcquisitionDecision_Unnecessary_Fields:
+class Dart_TreasuryStockTrustContract_Unnecessary_Fields:
     """
     자기주식취득 신탁계약 체결 결정 API 응답 중 불필요한 필드 정의.
     """
