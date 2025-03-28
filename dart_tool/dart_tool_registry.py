@@ -3,7 +3,9 @@ from typing import Optional
 from insider_trade_tool import (
     DARTMajorStockReportAPI, DARTExecutiveShareholdingAPI, 
     DartTSDispostionAPI, DartTSAcquisionAPI,
-    DartTSAcquisionTrustContractAPI)
+    DartTSAcquisionTrustContractAPI,
+    DartTSAcquisionTrustCancelAPI
+    )
 
 
 class DartToolRegistry:
@@ -17,7 +19,8 @@ class DartToolRegistry:
         self.major_stock_api = DARTMajorStockReportAPI()
         self.ts_disposal_api = DartTSDispostionAPI()
         self.ts_acquisition_api = DartTSAcquisionAPI()
-        self.ts_trust_acquisition_api = DartTSAcquisionTrustContractAPI()
+        self.ts_trust_contract_api = DartTSAcquisionTrustContractAPI()
+        self.ts_trust_canel_api = DartTSAcquisionTrustCancelAPI
 
     @tool
     def get_executive_shareholding_tool(
@@ -199,6 +202,40 @@ class DartToolRegistry:
             list[dict]: 조회된 자기주식 취득 신탁계약 공시 데이터
         """
         df = self._get_treasury_stock_trust_contracts(
+            stock_code=stock_code,
+            corp_name=corp_name,
+            start_date=start_date,
+            end_date=end_date,
+            reference_date=reference_date,
+            limit=limit
+        )
+        return df.to_dict(orient="records")
+    
+    @tool
+    def get_treasury_stock_trust_cancellations_tool(
+        self,
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        reference_date: Optional[str] = None,
+        limit: int = 20
+    ) -> list[dict]:
+        """
+        DART 자기주식취득 신탁계약 해지 결정 내역을 조회합니다.
+
+        Args:
+            stock_code (str, optional): 종목코드 (예: "005930")
+            corp_name (str, optional): 회사명 (예: "삼성전자")
+            start_date (str, optional): 시작일 ("YYYY-MM-DD")
+            end_date (str, optional): 종료일 ("YYYY-MM-DD")
+            reference_date (str, optional): 기준일 (없으면 최근 30일로 계산)
+            limit (int, optional): 최대 결과 수 (기본값 20)
+
+        Returns:
+            list[dict]: 해지된 신탁계약 공시 리스트
+        """
+        df = self._get_treasury_stock_trust_cancellations(
             stock_code=stock_code,
             corp_name=corp_name,
             start_date=start_date,
