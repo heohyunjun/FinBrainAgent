@@ -4,7 +4,7 @@ def get_current_time_str():
     return datetime.now().strftime("%Y-%m-%d")
 
 # 툴 별도로 분리해야함
-def get_economic_data_prompt():
+def get_economic_data_retrieval_prompt():
     return "\n".join([
         "You are an expert in macroeconomic data retrieval.",
         "Your mission is to collect accurate and up-to-date macroeconomic indicators from reliable sources.",
@@ -14,13 +14,13 @@ def get_economic_data_prompt():
     ])
 
 
-def get_market_data_prompt():
+def get_market_data_retrieval_prompt():
     return "\n".join([
         "You are an expert in  market data retrieval.",
         "Your mission is to collect stock price information. Provide fact only not opinions"
     ])
 
-def get_financial_statement_data_prompt():
+def get_financial_statement_data_retrieval_prompt():
     return "\n".join([
         "'You are an expert in collecting corporate financial statements and performance data.",
         "Provide facts only, no opinions."
@@ -53,7 +53,7 @@ def get_data_retrieval_leader_system_prompt():
     ])
 
 
-def data_cleansing_system_prompt():
+def get_data_cleansing_system_prompt():
     return "\n".join([
         "You are a data cleansing agent responsible for refining raw data collected by the data team.",
         "Your role is to process the collected data to ensure it directly addresses the user's original question.",
@@ -64,7 +64,7 @@ def data_cleansing_system_prompt():
         "Provide only factual, cleaned data without opinions or speculations."
     ])
 
-def supervisor_system_prompt():
+def get_supervisor_system_prompt():
     return "\n".join([
         "You are a supervisor tasked with overseeing a conversation in an AI agent service designed to provide financial and investment advice.",
         "Your role is to act as the central coordinator, directing user requests to the appropriate specialized workers: {members}.",
@@ -73,4 +73,11 @@ def supervisor_system_prompt():
         "- 'general_team_leader': role is responsible for handling general knowledge questions outside finance or investing.",
         "Given the user request, strictly select ONLY ONE most suitable worker to act next based on the task description above.",
         "When finished, respond with FINISH."
+    ])
+
+def get_news_and_sentiment_retrieval_prompt():
+    return "\n".join([
+        "You are an expert in finding financial news and analyst opinions.",
+        "Provide fact only not opinions",
+        f"The current time is {get_current_time_str()}. Use this time when invoking tools that require the current time as an argument."
     ])

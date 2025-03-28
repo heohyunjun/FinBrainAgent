@@ -10,15 +10,15 @@ class AgentConfig(TypedDict):
 agent_configs: dict[str, AgentConfig] = {
     "economic_data_retrieval_agent": {
         "tools": [],
-        "prompt": get_economic_data_prompt()
+        "prompt": get_economic_data_retrieval_prompt()
     },
     "market_data_retrieval_agent": {
         "tools": [],
-        "prompt": get_market_data_prompt()
+        "prompt": get_market_data_retrieval_prompt()
     },
     "financial_statement_retrieval_agent": {
         "tools": [],
-        "prompt": get_financial_statement_data_prompt()
+        "prompt": get_financial_statement_data_retrieval_prompt()
     },
     "insider_tracker_research_agent": {
         "tools": [],
@@ -30,10 +30,10 @@ agent_configs: dict[str, AgentConfig] = {
     },
     "data_cleansing_agent": {
         "tools": [],
-        "prompt": data_cleansing_system_prompt()
+        "prompt": get_data_cleansing_system_prompt()
     },
-    "supervisor": {
+    "news_and_sentiment_retrieval_agent": {
         "tools": [],
-        "prompt": supervisor_system_prompt()
+        "prompt": get_news_and_sentiment_retrieval_prompt()
     }
 }
