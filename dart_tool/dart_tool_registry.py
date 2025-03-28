@@ -1,6 +1,8 @@
 from langchain.tools import tool
 from typing import Optional
-from insider_trade_tool import DARTMajorStockReportAPI, DARTExecutiveShareholdingAPI, DARTTreasuryStockDispositionDecisionAPI
+from insider_trade_tool import (
+    DARTMajorStockReportAPI, DARTExecutiveShareholdingAPI, 
+    DARTTreasuryStockDispositionDecisionAPI, DARTTreasuryStockAcquisitionDecisionAPI)
 
 
 class DartToolRegistry:
@@ -13,6 +15,7 @@ class DartToolRegistry:
         self.exec_shareholding_api = DARTExecutiveShareholdingAPI()
         self.major_stock_api = DARTMajorStockReportAPI()
         self.ts_disposal_api = DARTTreasuryStockDispositionDecisionAPI()
+        self.ts_acquisition_api = DARTTreasuryStockAcquisitionDecisionAPI()
 
     @tool
     def get_executive_shareholding_tool(
@@ -122,6 +125,38 @@ class DartToolRegistry:
             list[dict]: 자기주식 처분 결정 내역 리스트
         """
         df = self._get_treasury_stock_disposals(
+            stock_code=stock_code,
+            corp_name=corp_name,
+            start_date=start_date,
+            end_date=end_date,
+            limit=limit
+        )
+        return df.to_dict(orient="records")
+    
+
+    @tool
+    def get_treasury_stock_acquisitions_tool(
+        self,
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None,
+        start_date: str = None,
+        end_date: str = None,
+        limit: int = 20
+    ) -> list[dict]:
+        """
+        DART API를 통해 자기주식 취득 결정 내역을 조회합니다.
+
+        Args:
+            stock_code (str, optional): 조회할 기업의 종목코드. 예: "005930"
+            corp_name (str, optional): 조회할 기업의 이름. 예: "삼성전자"
+            start_date (str): 조회 시작일. 형식: "YYYY-MM-DD"
+            end_date (str): 조회 종료일. 형식: "YYYY-MM-DD"
+            limit (int, optional): 결과 최대 수. 기본값은 20개
+
+        Returns:
+            list[dict]: 자기주식 취득결정 공시 리스트 (최신순 정렬)
+        """
+        df = self._get_treasury_stock_acquisitions(
             stock_code=stock_code,
             corp_name=corp_name,
             start_date=start_date,
