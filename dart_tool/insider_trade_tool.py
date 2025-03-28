@@ -11,7 +11,8 @@ from dart_tool.dart_treasury_stock_decision_field_definitions import (
     )
 
 from dart_tool.dart_treasury_stock_trust_field_definitions import(
-    Dart_TrustStockAcquisitionDecision_Unnecessary_Fields as DTTUF
+    Dart_TreasuryStockTrustContract_Unnecessary_Fields as DTSTCUF,
+    Dart_TreasuryStockTrustCancel_Unnecessary_Fields as DTSTCUF
 )
 
 class DartBaseAPI:
@@ -455,26 +456,26 @@ class DartTSAcquisionTrustContractAPI(DartTSDectisonBaseAPI):
             pd.DataFrame: 필터링된 자기주식 취득 신탁계약 체결 내역
         """
         drop_fields = [
-            DTTUF.RECEIPT_NO,
-            DTTUF.CORP_CLASS,
-            DTTUF.CORP_CODE,
-            DTTUF.OUTSIDE_DIR_PRESENT,
-            DTTUF.OUTSIDE_DIR_ABSENT,
-            DTTUF.AUDIT_ATTEND,
-            DTTUF.BROKER,
-            DTTUF.AQ_WTN_DIV_OSTK,
-            DTTUF.AQ_WTN_DIV_OSTK_RT,
-            DTTUF.AQ_WTN_DIV_ESTK,
-            DTTUF.AQ_WTN_DIV_ESTK_RT,
-            DTTUF.EAQ_OSTK,
-            DTTUF.EAQ_OSTK_RT,
-            DTTUF.EAQ_ESTK,
-            DTTUF.EAQ_ESTK_RT
+            DTSTCUF.RECEIPT_NO,
+            DTSTCUF.CORP_CLASS,
+            DTSTCUF.CORP_CODE,
+            DTSTCUF.OUTSIDE_DIR_PRESENT,
+            DTSTCUF.OUTSIDE_DIR_ABSENT,
+            DTSTCUF.AUDIT_ATTEND,
+            DTSTCUF.BROKER,
+            DTSTCUF.AQ_WTN_DIV_OSTK,
+            DTSTCUF.AQ_WTN_DIV_OSTK_RT,
+            DTSTCUF.AQ_WTN_DIV_ESTK,
+            DTSTCUF.AQ_WTN_DIV_ESTK_RT,
+            DTSTCUF.EAQ_OSTK,
+            DTSTCUF.EAQ_OSTK_RT,
+            DTSTCUF.EAQ_ESTK,
+            DTSTCUF.EAQ_ESTK_RT
         ]
 
         df = self._fetch_decision_data(
             endpoint="tsstkAqTrctrCnsDecsn.json",
-            date_column="bddd",
+            date_column="bddd", # 이사회 결의한 날짜를 기준으로 공시가 이루어짐 대부분
             drop_fields=drop_fields,
             stock_code=stock_code,
             corp_name=corp_name,
@@ -486,6 +487,71 @@ class DartTSAcquisionTrustContractAPI(DartTSDectisonBaseAPI):
 
         # 추가 날짜 필드 파싱
         for col in ["ctr_pd_bgd", "ctr_pd_edd", "ctr_cns_prd"]:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], format="%Y년 %m월 %d일", errors="coerce")
+
+        return df
+    
+
+class DartTSAcquisionTrustCancelAPI(DartTSDectisonBaseAPI):
+    """
+    DART 자기주식취득 신탁계약 해지 결정 API(tsstkAqTrctrCcDecsn)를 처리하는 클래스.
+    """
+
+    def _get_treasury_stock_trust_cancellations(
+        self,
+        stock_code: Optional[str] = None,
+        corp_name: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        reference_date: Optional[str] = None,
+        limit: int = 20
+    ) -> pd.DataFrame:
+        """
+        자기주식취득 신탁계약 해지 결정 내역을 반환
+
+        Args:
+            stock_code (Optional[str]): 종목코드
+            corp_name (Optional[str]): 회사명
+            start_date (str, optional): 검색 시작일자 (YYYY-MM-DD)
+            end_date (str, optional): 검색 종료일자 (YYYY-MM-DD)
+            reference_date (str, optional): 현재 시간
+            limit (int): 최대 리턴 개수
+
+        Returns:
+            pd.DataFrame: 필터링된 자기주식 취득 신탁계약 해지 결정 내역
+        """
+        drop_fields = [
+            DTSTCUF.RECEIPT_NO,
+            DTSTCUF.CORP_CLASS,
+            DTSTCUF.CORP_CODE,
+            DTSTCUF.AQ_WTN_DIV_OSTK,
+            DTSTCUF.AQ_WTN_DIV_OSTK_RT,
+            DTSTCUF.AQ_WTN_DIV_ESTK,
+            DTSTCUF.AQ_WTN_DIV_ESTK_RT,
+            DTSTCUF.EAQ_OSTK,
+            DTSTCUF.EAQ_OSTK_RT,
+            DTSTCUF.EAQ_ESTK,
+            DTSTCUF.EAQ_ESTK_RT,
+            DTSTCUF.OUTSIDE_DIR_PRESENT,
+            DTSTCUF.OUTSIDE_DIR_ABSENT,
+            DTSTCUF.AUDIT_ATTEND,
+        ]
+
+        df = self._fetch_decision_data(
+            endpoint="tsstkAqTrctrCcDecsn.json",
+            date_column="cc_prd", # 실제 해지가 이뤄지는 예정일 , 체결 결정떄와는 약간 다름
+            drop_fields=drop_fields,
+            stock_code=stock_code,
+            corp_name=corp_name,
+            start_date=start_date,
+            end_date=end_date,
+            reference_date=reference_date,
+            limit=limit
+        )
+
+        # 추가 날짜 필드 파싱
+        for col in ["bddd", "ctr_pd_bfcc_bgd", "ctr_pd_bfcc_edd"]:
             if col in df.columns:
                 df[col] = pd.to_datetime(df[col], format="%Y년 %m월 %d일", errors="coerce")
 
