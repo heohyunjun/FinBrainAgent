@@ -10,8 +10,6 @@ import pandas as pd
 from dateutil.parser import parse
 from dotenv import load_dotenv
 from langchain.tools import tool
-from langchain_community.agent_toolkits.polygon.toolkit import PolygonToolkit
-from langchain_community.utilities.polygon import PolygonAPIWrapper
 from langchain_community.tools import DuckDuckGoSearchRun
 
 from sec_tool.sec_financial_fiedls_definitions import FinancialNecessaryFields
@@ -19,11 +17,6 @@ from sec_tool.sec_financial_fiedls_definitions import FinancialNecessaryFields
 
 # 환경 변수 로드
 load_dotenv()
-
-# Polygon API 설정
-polygon = PolygonAPIWrapper()
-polygon_toolkit = PolygonToolkit.from_polygon_api_wrapper(polygon)
-polygon_tools = polygon_toolkit.get_tools()
 
 
 class MarketDataTools:
@@ -51,15 +44,16 @@ class MarketDataTools:
         stock_info = yf.download(ticker, period=period, start=start, end=end).to_dict()
         return stock_info
 
-    @staticmethod
-    def get_polygon_tools():
-        """Polygon API에서 제공하는 모든 도구를 반환합니다."""
-        return polygon_tools
 
-    
+
     @staticmethod
-    def get_websearch_tool():
-        return DuckDuckGoSearchRun()
+    @tool
+    def get_websearch_tool(
+        query: Annotated[str, "Search query"]
+    ) -> Annotated[str, "Web search result from DuckDuckGo"]:
+        """웹 검색을 수행하고 결과를 반환합니다."""
+        tool = DuckDuckGoSearchRun()
+        return tool.invoke(query)
 
     @staticmethod
     @tool
