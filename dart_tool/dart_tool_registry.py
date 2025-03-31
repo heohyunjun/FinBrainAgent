@@ -1,6 +1,6 @@
 from langchain.tools import tool
 from typing import Optional
-from insider_trade_tool import (
+from dart_tool.insider_trade_tool import (
     DARTMajorStockReportAPI, DARTExecutiveShareholdingAPI, 
     DartTSDispostionAPI, DartTSAcquisionAPI,
     DartTSAcquisionTrustContractAPI,
@@ -10,21 +10,21 @@ from insider_trade_tool import (
 
 class DartToolRegistry:
     """
-    LangGraph에 등록할 DART 기반 툴들을 모아두는 레지스트리 클래스.
-    각 툴은 내부적으로 인스턴스를 호출하며, self 없이 사용할 수 있도록 래핑됨.
+    LangGraph에 등록할 DART 기반 툴들을 모아두는 정적 레지스트리 클래스.
+    모든 툴은 @staticmethod으로 등록되며, LangGraph agent에서 self 없이 사용 가능.
     """
 
-    def __init__(self):
-        self.exec_shareholding_api = DARTExecutiveShareholdingAPI() # 임원 및 주요주주 소유 보고 API를 처리하는 클래스
-        self.major_stock_api = DARTMajorStockReportAPI() #DART 대량보유 상황보고서(majorstock) API를 처리하는 클래스
-        self.ts_disposal_api = DartTSDispostionAPI() # 자기주식 처분 결정 보고서 내에 주요 정보를 제공
-        self.ts_acquisition_api = DartTSAcquisionAPI() # 자기주식 취득 결정 보고서 내에 주요 정보를 제공
-        self.ts_trust_contract_api = DartTSAcquisionTrustContractAPI() # 자기주식취득 신탁계약 체결 결정 보고서 내에 주요 정보를 제공 
-        self.ts_trust_canel_api = DartTSAcquisionTrustCancelAPI # 기주식취득 신탁계약 해지 결정 보고서내에 주요 정보를 제공
+    # 클래스 변수로 API 인스턴스 선언
+    exec_api = DARTExecutiveShareholdingAPI()
+    major_api = DARTMajorStockReportAPI()
+    ts_disposal_api = DartTSDispostionAPI()
+    ts_acquisition_api = DartTSAcquisionAPI()
+    ts_trust_contract_api = DartTSAcquisionTrustContractAPI()
+    ts_trust_cancel_api = DartTSAcquisionTrustCancelAPI()
 
+    @staticmethod
     @tool
     def get_executive_shareholding_tool(
-        self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
         start_date: Optional[str] = None,
@@ -47,7 +47,7 @@ class DartToolRegistry:
             list[dict]: 내부자 주식 보유 및 변동 내역이 담긴 딕셔너리 리스트.
                         각 항목은 보고자, 임원직위, 소유 주식 수, 증감 내역 등을 포함함.
         """
-        df = self.exec_api._get_executive_shareholding(
+        df = DartToolRegistry.exec_api._get_executive_shareholding(
             stock_code=stock_code,
             corp_name=corp_name,
             start_date=start_date,
@@ -57,9 +57,9 @@ class DartToolRegistry:
         )
         return df.to_dict(orient="records")
 
+    @staticmethod
     @tool
     def get_major_stock_reports_tool(
-        self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
         min_ratio: Optional[float] = None,
@@ -91,7 +91,7 @@ class DartToolRegistry:
             list[dict]: 필터링된 대량보유 보고서, 내부자 주식 보유 및 변동 내역이 담긴 딕셔너리 리스트.
                         각 항목은 보고자, 임원직위, 소유 주식 수, 증감 내역 등을 포함함.
         """
-        df = self.major_api._get_major_stock_reports(
+        df = DartToolRegistry.major_api._get_major_stock_reports(
             stock_code=stock_code,
             corp_name=corp_name,
             min_ratio=min_ratio,
@@ -105,11 +105,10 @@ class DartToolRegistry:
             limit=limit
         )
         return df.to_dict(orient="records")
-    
 
+    @staticmethod
     @tool
     def get_ts_disposal_tool(
-        self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
         start_date: str = None,
@@ -131,7 +130,7 @@ class DartToolRegistry:
         Returns:
             list[dict]: 자기주식 처분 결정 내역 리스트
         """
-        df = self._get_treasury_stock_disposals(
+        df = DartToolRegistry.ts_disposal_api._get_treasury_stock_disposals(
             stock_code=stock_code,
             corp_name=corp_name,
             start_date=start_date,
@@ -140,11 +139,10 @@ class DartToolRegistry:
             limit=limit
         )
         return df.to_dict(orient="records")
-    
 
+    @staticmethod
     @tool
     def get_ts_acquisition_tool(
-        self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
         start_date: Optional[str] = None,
@@ -166,7 +164,7 @@ class DartToolRegistry:
         Returns:
             list[dict]: 자기주식 취득결정 공시 리스트 (최신순 정렬)
         """
-        df = self._get_treasury_stock_acquisitions(
+        df = DartToolRegistry.ts_acquisition_api._get_treasury_stock_acquisitions(
             stock_code=stock_code,
             corp_name=corp_name,
             start_date=start_date,
@@ -176,10 +174,9 @@ class DartToolRegistry:
         )
         return df.to_dict(orient="records")
 
-
+    @staticmethod
     @tool
     def get_ts_trust_contract_tool(
-        self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
         start_date: Optional[str] = None,
@@ -201,7 +198,7 @@ class DartToolRegistry:
         Returns:
             list[dict]: 조회된 자기주식 취득 신탁계약 공시 데이터
         """
-        df = self._get_treasury_stock_trust_contracts(
+        df = DartToolRegistry.ts_trust_contract_api._get_treasury_stock_trust_contracts(
             stock_code=stock_code,
             corp_name=corp_name,
             start_date=start_date,
@@ -210,10 +207,10 @@ class DartToolRegistry:
             limit=limit
         )
         return df.to_dict(orient="records")
-    
+
+    @staticmethod
     @tool
     def get_ts_trust_cancel_tool(
-        self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
         start_date: Optional[str] = None,
@@ -235,7 +232,7 @@ class DartToolRegistry:
         Returns:
             list[dict]: 해지된 신탁계약 공시 리스트
         """
-        df = self._get_treasury_stock_trust_cancellations(
+        df = DartToolRegistry.ts_trust_cancel_api._get_treasury_stock_trust_cancellations(
             stock_code=stock_code,
             corp_name=corp_name,
             start_date=start_date,
