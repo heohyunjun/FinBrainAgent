@@ -15,12 +15,12 @@ class DartToolRegistry:
     """
 
     def __init__(self):
-        self.exec_shareholding_api = DARTExecutiveShareholdingAPI()
-        self.major_stock_api = DARTMajorStockReportAPI()
-        self.ts_disposal_api = DartTSDispostionAPI()
-        self.ts_acquisition_api = DartTSAcquisionAPI()
-        self.ts_trust_contract_api = DartTSAcquisionTrustContractAPI()
-        self.ts_trust_canel_api = DartTSAcquisionTrustCancelAPI
+        self.exec_shareholding_api = DARTExecutiveShareholdingAPI() # 임원 및 주요주주 소유 보고 API를 처리하는 클래스
+        self.major_stock_api = DARTMajorStockReportAPI() #DART 대량보유 상황보고서(majorstock) API를 처리하는 클래스
+        self.ts_disposal_api = DartTSDispostionAPI() # 자기주식 처분 결정 보고서 내에 주요 정보를 제공
+        self.ts_acquisition_api = DartTSAcquisionAPI() # 자기주식 취득 결정 보고서 내에 주요 정보를 제공
+        self.ts_trust_contract_api = DartTSAcquisionTrustContractAPI() # 자기주식취득 신탁계약 체결 결정 보고서 내에 주요 정보를 제공 
+        self.ts_trust_canel_api = DartTSAcquisionTrustCancelAPI # 기주식취득 신탁계약 해지 결정 보고서내에 주요 정보를 제공
 
     @tool
     def get_executive_shareholding_tool(
