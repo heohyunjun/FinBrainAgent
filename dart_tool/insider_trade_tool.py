@@ -322,6 +322,9 @@ class DartTSDectisonBaseAPI(DartBaseAPI):
 
 
 class DartTSAcquisionAPI(DartTSDectisonBaseAPI):
+    """
+    자기주식 취득 결정 보고서 내에 주요 정보를 제공
+    """
     def _get_treasury_stock_acquisitions(
         self,
         stock_code: Optional[str] = None,
@@ -380,6 +383,9 @@ class DartTSAcquisionAPI(DartTSDectisonBaseAPI):
         )
 
 class DartTSDispostionAPI(DartTSDectisonBaseAPI):
+    """
+    자기주식 처분 결정 보고서 내에 주요 정보를 제공
+    """
     def _get_treasury_stock_disposals(
         self,
         stock_code: Optional[str] = None,
@@ -429,7 +435,7 @@ class DartTSDispostionAPI(DartTSDectisonBaseAPI):
 
 class DartTSAcquisionTrustContractAPI(DartTSDectisonBaseAPI):
     """
-    DART 자기주식취득 신탁계약 체결 결정 API(tsstkAqTrctrCnsDecsn)를 처리하는 클래스.
+    자기주식취득 신탁계약 체결 결정 보고서 내에 주요 정보를 제공
     """
 
     def _get_treasury_stock_trust_contracts(
@@ -462,7 +468,6 @@ class DartTSAcquisionTrustContractAPI(DartTSDectisonBaseAPI):
             DTSTCUF.OUTSIDE_DIR_PRESENT,
             DTSTCUF.OUTSIDE_DIR_ABSENT,
             DTSTCUF.AUDIT_ATTEND,
-            DTSTCUF.BROKER,
             DTSTCUF.AQ_WTN_DIV_OSTK,
             DTSTCUF.AQ_WTN_DIV_OSTK_RT,
             DTSTCUF.AQ_WTN_DIV_ESTK,
@@ -495,7 +500,7 @@ class DartTSAcquisionTrustContractAPI(DartTSDectisonBaseAPI):
 
 class DartTSAcquisionTrustCancelAPI(DartTSDectisonBaseAPI):
     """
-    DART 자기주식취득 신탁계약 해지 결정 API(tsstkAqTrctrCcDecsn)를 처리하는 클래스.
+    자기주식취득 신탁계약 해지 결정 보고서내에 주요 정보를 제공
     """
 
     def _get_treasury_stock_trust_cancellations(
