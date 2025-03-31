@@ -33,7 +33,7 @@ class DartToolRegistry:
         limit: int = 20
     ) -> list[dict]:
         """
-        임원 및 주요주주 소유 보고서 조회 도구
+        임원 및 주요주주 소유 보고서 조회하는 도구
 
         Args:
             stock_code (str, optional): 종목코드
@@ -73,7 +73,7 @@ class DartToolRegistry:
         limit: int = 20
     ) -> list[dict]:
         """
-        대량보유 상황 보고서 조회 도구 
+        대량보유 상황보고 정보를 제공하는 도구 
         Args:
             stock_code (str, optional): 종목코드
             corp_name (str, optional): 회사명
@@ -108,7 +108,7 @@ class DartToolRegistry:
     
 
     @tool
-    def get_treasury_stock_disposals_tool(
+    def get_ts_disposal_tool(
         self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
@@ -118,7 +118,7 @@ class DartToolRegistry:
         limit: int = 100
     ) -> list[dict]:
         """
-        DART API를 통해 자기주식 처분 결정 내역을 조회합니다.
+        자기주식 처분 결정 내역을 조회하는 도구
 
         Args:
             stock_code (str, optional): 종목코드 (예: "005930")
@@ -143,7 +143,7 @@ class DartToolRegistry:
     
 
     @tool
-    def get_treasury_stock_acquisitions_tool(
+    def get_ts_acquisition_tool(
         self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
@@ -153,7 +153,7 @@ class DartToolRegistry:
         limit: int = 20
     ) -> list[dict]:
         """
-        DART API를 통해 자기주식 취득 결정 내역을 조회합니다.
+        자기주식 취득 결정 내역을 조회하는 도구
 
         Args:
             stock_code (str, optional): 조회할 기업의 종목코드. 예: "005930"
@@ -178,7 +178,7 @@ class DartToolRegistry:
 
 
     @tool
-    def get_treasury_stock_trust_contracts_tool(
+    def get_ts_trust_contract_tool(
         self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
@@ -188,7 +188,7 @@ class DartToolRegistry:
         limit: int = 20
     ) -> list[dict]:
         """
-        DART 자기주식취득 신탁계약 체결 결정을 조회하는 도구입니다.
+        자기주식취득 신탁계약 체결 결정을 조회하는 도구
 
         Args:
             stock_code (Optional[str]): 종목코드 (예: "005930")
@@ -212,7 +212,7 @@ class DartToolRegistry:
         return df.to_dict(orient="records")
     
     @tool
-    def get_treasury_stock_trust_cancellations_tool(
+    def get_ts_trust_cancel_tool(
         self,
         stock_code: Optional[str] = None,
         corp_name: Optional[str] = None,
@@ -222,7 +222,7 @@ class DartToolRegistry:
         limit: int = 20
     ) -> list[dict]:
         """
-        DART 자기주식취득 신탁계약 해지 결정 내역을 조회합니다.
+        자기주식취득 신탁계약 해지 결정 내역을 조회하는 도구
 
         Args:
             stock_code (str, optional): 종목코드 (예: "005930")
