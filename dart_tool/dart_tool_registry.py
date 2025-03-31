@@ -9,12 +9,6 @@ from dart_tool.insider_trade_tool import (
 
 
 class DartToolRegistry:
-    """
-    LangGraph에 등록할 DART 기반 툴들을 모아두는 정적 레지스트리 클래스.
-    모든 툴은 @staticmethod으로 등록되며, LangGraph agent에서 self 없이 사용 가능.
-    """
-
-    # 클래스 변수로 API 인스턴스 선언
     exec_api = DARTExecutiveShareholdingAPI()
     major_api = DARTMajorStockReportAPI()
     ts_disposal_api = DartTSDispostionAPI()
