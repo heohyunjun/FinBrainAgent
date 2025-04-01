@@ -34,7 +34,7 @@ def get_data_retrieval_leader_system_prompt():
         "- news_and_sentiment_retrieval: Handles news articles, market trends, general industry updates.",
         "- market_data_retrieval: Handles current stock prices",
         "- financial_statement_retrievavl: Handles income statements, financial statements, and SEC filings.",
-        "- insider_tracker_research: Handles insider trading filings and insider transactions.",
+        "- insider_team_leader: Handles insider trading filings and insider transactions by determining whether the request pertains to domestic or international data and delegating to appropriate sub-workers.",
         "- economic_data_retrieval: Handles macroeconomic data",
         "Given the user request, strictly select ONLY ONE most suitable worker to act next based on the task description above.",
         "If the request is too vague and lacks specific details, set 'is_vague' to true and 'next' to 'FINISH'",
