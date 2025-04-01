@@ -4,6 +4,7 @@ import pandas as pd
 from typing import Optional
 from langchain.tools import tool
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
 from dart_tool.dart_treasury_stock_decision_field_definitions import (
     Dart_TreasuryStockDispositionDecision_UnNecessary_Fields as DTUF,
@@ -15,6 +16,7 @@ from dart_tool.dart_treasury_stock_trust_field_definitions import(
     Dart_TreasuryStockTrustCancel_Unnecessary_Fields as DTSTCUF
 )
 
+load_dotenv()
 class DartBaseAPI:
     """
     DART API의 공통 로직을 처리하는 기반 클래스.
