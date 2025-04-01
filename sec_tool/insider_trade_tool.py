@@ -175,7 +175,7 @@ class SECInsiderTradeAPI(SECBaseAPI):
         return SECInsiderTradeAPI.filter_response(raw_data) if raw_data else None
 
     @tool
-    def fetch_filings(
+    def fetch_filings_form3_4_5(
         ticker: str = None,
         owner: str = None,
         transaction_type: str = None,
@@ -186,7 +186,7 @@ class SECInsiderTradeAPI(SECBaseAPI):
         
     ) -> dict:
         """
-        SEC Insider Trading API를 호출하여 지정된 조건에 맞는 내부자 거래 데이터를 가져옵니다.
+        SEC의 Form 3, 4, 5 공시를 기반으로 미국 상장기업 임원, 이사, 10% 이상 주주의 내부자 주식 매매 내역을 조회하는 도구
 
         Args:
             ticker (str, optional): 검색할 기업의 주식 티커 (예: "TSLA").
@@ -363,7 +363,7 @@ class SEC13D13GAPI(SECBaseAPI):
         return SEC13D13GAPI.filter_response(raw_data) if raw_data else None
 
     @tool
-    def fetch_filings(
+    def fetch_filings_form13d_13g(
         issuer_name: str = None,  
         owner: str = None,
         start_date: str = None,
@@ -375,7 +375,8 @@ class SEC13D13GAPI(SECBaseAPI):
         reference_date: str = None
     ) -> dict:
         """
-        SEC 13D/13G API를 호출하여 지정된 조건에 맞는 투자 지분 공개 데이터를 가져옵니다.
+        SEC의 Form 13D 및 13G 공시를 조회하는 도구입니다.
+        행동주의 또는 패시브 투자자의 주요 지분 보유 현황(5% 이상)을 확인할 수 있다
 
         Args:
             issuer_name (str, optional): 검색할 기업의 명칭 (예: "Tesla, Inc.").  
@@ -412,7 +413,7 @@ class SEC13D13GAPI(SECBaseAPI):
 
 class SEC13FHoldingsAPI(SECBaseAPI):
     """
-    SEC 13F Holdings 보고서 API 클래스.
+    SEC에 제출된 Form 13F 공시에서 기관투자자의 포트폴리오 보유 종목 내역만 조회하는 도구
     """
 
     @staticmethod
@@ -551,7 +552,7 @@ class SEC13FHoldingsAPI(SECBaseAPI):
         return SEC13FHoldingsAPI.filter_response(raw_data) if raw_data else None
 
     @tool
-    def fetch_filings(
+    def fetch_filings_13f(
         cik: str = None,
         company_name: str = None,
         issuer_name: str = None,
@@ -598,7 +599,7 @@ class SEC13FHoldingsAPI(SECBaseAPI):
             # 기본적으로 최근 30일 기준
             start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
 
-        result= SEC13FHoldingsAPI._fetch_holdings_core(
+        result= SEC13FHoldingsAPI._fetch_filings_core(
             cik, company_name, issuer_name, ticker, cusip, start_date, end_date,
             min_value, max_value, min_shares, max_shares, from_value
         )
