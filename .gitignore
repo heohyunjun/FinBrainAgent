@@ -175,3 +175,4 @@ cython_debug/
 /langgraph_tutorial/study/documents/*.txt
 
 /team_graph/*.ipynb
+/.vscode/
