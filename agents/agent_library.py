@@ -1,6 +1,6 @@
 from typing import TypedDict, List, Optional, Literal
 from sec_tool.market_data_tool import MarketDataTools, FinancialDataTools, EconomicDataTools
-from sec_tool.insider_trade_tool import SECInsiderTradeAPI
+from sec_tool.insider_trade_tool import SECInsiderTradeAPI,SEC13D13GAPI, SEC13FHoldingsAPI
 from agents.prompt_utils import *
 from dart_tool.dart_tool_registry import DartToolRegistry
 
@@ -31,18 +31,13 @@ agent_configs: dict[str, AgentConfig] = {
         "prompt": get_financial_statement_data_retrieval_prompt(),
         "agent_type": "worker"
     },
-    "insider_tracker_research_agent": {
-        "tools": [SECInsiderTradeAPI.fetch_filings],
-        "prompt": get_international_insider_researcher_prompt(),
-        "agent_type": "worker"
-    },
     "data_retrieval_leader_agent": {
         "tools": [],
         "prompt": get_data_retrieval_leader_system_prompt(),
         "agent_type": "supervisor",
         "members": [
             "news_and_sentiment_retrieval", "market_data_retrieval", 
-            "financial_statement_retrieval","insider_tracker_research",
+            "financial_statement_retrieval","insider_team_leader",
             "economic_data_retrieval"
             ] 
     },
@@ -83,7 +78,11 @@ agent_configs: dict[str, AgentConfig] = {
         "agent_type": "worker",
     },
     "international_insider_researcher": {
-        "tools": [SECInsiderTradeAPI.fetch_filings],
+        "tools": [
+            SECInsiderTradeAPI.fetch_filings_form3_4_5,
+            SEC13D13GAPI.fetch_filings_form13d_13g,
+            SEC13FHoldingsAPI.fetch_filings_13f  
+        ],
         "prompt": get_international_insider_researcher_prompt(),
         "agent_type": "worker",
     }
