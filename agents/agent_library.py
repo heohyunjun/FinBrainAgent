@@ -53,7 +53,7 @@ agent_configs: dict[str, AgentConfig] = {
     },
     "supervisor": {
         "tools": [],
-        "prompt": get_news_and_sentiment_retrieval_prompt(),
+        "prompt": get_supervisor_system_prompt(),
         "agent_type": "supervisor",
         "members" : [
             "data_retrieval_leader", "general_team_leader"
