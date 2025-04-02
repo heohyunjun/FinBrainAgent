@@ -1,22 +1,18 @@
 
-import os 
 from dotenv import load_dotenv
-from datetime import datetime
-from typing import List, Annotated, Literal, Dict, Callable, TypeVar, Tuple, Type, Generic, Optional, Union, Any
+from typing import Literal
+from typing_extensions import TypedDict 
 
-from langchain.prompts import PromptTemplate
-from langgraph.graph import StateGraph, MessagesState, START, END
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 from langchain.prompts.chat import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage
 from langgraph.types import Command
 from langgraph.prebuilt import create_react_agent
-from langchain_core.messages import HumanMessage
+from langgraph.graph import StateGraph, MessagesState, START, END
 
 from agents.agent_library import agent_configs
 
-from typing_extensions import TypedDict 
+
 load_dotenv() 
 
 
@@ -29,7 +25,7 @@ insider_team_leader_llm = ChatOpenAI(model=Model_NAME)
 class InsiderState(MessagesState):
     query: str
 
-def data_retrieval_leader_node(state: InsiderState):
+def data_team_leader_node(state):
     return state
 
 insider_team_members = agent_configs['insider_team_leader']['members']
@@ -53,13 +49,13 @@ class InsiderTeamRouter(TypedDict):
     next: Literal[*insider_team_options_for_next]
 
 
-def insider_team_leader_node(state: InsiderState) -> Command[Literal[*insider_team_members, "data_retrieval_leader"]]:
+def insider_team_leader_node(state: InsiderState) -> Command[Literal[*insider_team_members, "data_team_leader"]]:
     insider_team_chain = insider_team_leader_prompt | insider_team_leader_llm.with_structured_output(InsiderTeamRouter)
     response = insider_team_chain.invoke(state)
 
     goto = response["next"]
     if goto == "FINISH":
-        goto = "data_retrieval_leader"
+        goto = "data_team_leader"
 
     return Command(goto=goto)
 
@@ -98,7 +94,7 @@ def international_insider_researcher_node(state: InsiderState) -> Command[Litera
 
 insider_graph_builder = StateGraph(InsiderState)
 insider_graph_builder.add_node("insider_team_leader", insider_team_leader_node)
-insider_graph_builder.add_node("data_retrieval_leader", data_retrieval_leader_node)
+insider_graph_builder.add_node("data_team_leader", data_team_leader_node)
 insider_graph_builder.add_node("domestic_insider_researcher", domestic_insider_researcher_node)
 insider_graph_builder.add_node("international_insider_researcher", international_insider_researcher_node)
 
