@@ -33,7 +33,7 @@ agent_configs: dict[str, AgentConfig] = {
     },
     "data_retrieval_leader_agent": {
         "tools": [],
-        "prompt": get_data_retrieval_leader_system_prompt(),
+        "prompt": get_data_team_leader_system_prompt(),
         "agent_type": "supervisor",
         "members": [
             "news_and_sentiment_retrieval", "market_data_retrieval", 
