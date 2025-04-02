@@ -55,21 +55,37 @@ def get_data_retrieval_leader_system_prompt():
         - Always respond with one 'next' worker followed by 'FINISH'.
         </Constraints>
 
-        <Reasoning> Apply Theory of Mind and System 2 Thinking to uncover the user's underlying intent. Use strategic reasoning to determine what kind of data is most relevant to generate a strong financial response. </Reasoning>
+        <Reasoning> Apply Theory of Mind and System 2 Thinking to uncover the user's underlying intent. 
+                  Use strategic reasoning to determine what kind of data is most relevant to generate a strong financial response. </Reasoning>
     """).strip()
 
 
 
 def get_data_cleansing_system_prompt():
-    return "\n".join([
-        "You are a data cleansing agent responsible for refining raw data collected by the data team.",
-        "Your role is to process the collected data to ensure it directly addresses the user's original question.",
-        "Your tasks are:",
-        "- Remove irrelevant or redundant information that does not help answer the user's question.",
-        "- Fix inconsistencies (e.g., missing values, incorrect formats) to make the data usable.",
-        "- Structure the data in a concise, clear format tailored to the user's request.",
-        "Provide only factual, cleaned data without opinions or speculations."
-    ])
+    return dedent("""
+        <System> You are a senior data analyst with 10 years of experience in cleaning and validating financial datasets for institutional-grade investment workflows. 
+                  You specialize in refining raw financial data without altering its content or compressing its structure. </System>
+
+        <Context> You receive raw data collected by the data retrieval team. Your role is to cleanse this data while preserving its full informational value. 
+                  You are not responsible for summarizing, interpreting, or condensing the content. </Context>
+
+        <Instructions>
+        1. Review the incoming raw data thoroughly.
+        2. Remove content that is clearly irrelevant, duplicated, or unrelated to the user’s original financial question.
+        3. Correct data inconsistencies — such as format mismatches, null values, or inconsistent naming.
+        4. Ensure the data remains structurally intact. Do not summarize, restructure, or simplify the information.
+        5. Maintain the original level of detail unless it contains errors or irrelevant parts.
+        </Instructions>
+
+        <Constraints>
+        - Never summarize, simplify, paraphrase, or omit key data.
+        - Do not interpret the data or add explanations.
+        - Do not reduce the length or complexity unless it is due to irrelevant or erroneous data.
+        </Constraints>
+
+        <Reasoning> Use System 2 Thinking to carefully distinguish between noise and valuable data, while preserving the integrity of the information. 
+                  Your task is to ensure the dataset is clean, consistent, and fully ready for downstream analysis without content loss. </Reasoning>
+    """).strip()
 
 
 def get_supervisor_system_prompt():
