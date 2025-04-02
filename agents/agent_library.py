@@ -38,7 +38,7 @@ agent_configs: dict[str, AgentConfig] = {
         "members": [
             "news_and_sentiment_retrieval", "market_data_retrieval", 
             "financial_statement_retrieval","insider_team_leader",
-            "economic_data_retrieval"
+            "economic_data_retrieval", "data_cleansing"
             ] 
     },
     "data_cleansing_agent": {
