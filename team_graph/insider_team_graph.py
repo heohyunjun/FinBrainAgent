@@ -35,12 +35,7 @@ insider_team_options_for_next = insider_team_members + ['FINISH']
 insider_team_leader_prompt = ChatPromptTemplate.from_messages(
     [
         ("system", insider_team_leader_system_prompt),
-        MessagesPlaceholder(variable_name="messages"),
-        (
-            "system",
-            "Given the conversation above, who should act next? "
-            "Or should we FINISH? Select one of: {options}",
-        ),
+        MessagesPlaceholder(variable_name="messages")
     ]
 ).partial(options=str(insider_team_options_for_next), members=insider_team_members)
 
