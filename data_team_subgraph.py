@@ -1,16 +1,18 @@
+
 from dotenv import load_dotenv
-from pydantic import BaseModel, Field
-from typing import Literal, Optional
+from typing import Literal
 from typing_extensions import TypedDict 
 
 # LangChain 및 LangGraph 관련 라이브러리
 from langchain.prompts.chat import ChatPromptTemplate, MessagesPlaceholder
-
+from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
 
 from langgraph.types import Command
+from langgraph.graph.message import add_messages
 from langgraph.graph import StateGraph, MessagesState, START, END
 from langgraph.prebuilt import create_react_agent
+
 from langsmith import utils 
 from langchain_openai import ChatOpenAI
 
@@ -18,7 +20,7 @@ from agents.agent_library import agent_configs
 from team_graph.report_team_subgraph import report_graph
 from team_graph.general_chat_subgraph import general_graph
 from team_graph.insider_team_graph import insider_graph 
-
+from team_graph.analyst_team_graph import analyst_graph
 # 환경 변수 로드
 load_dotenv()
 print(utils.tracing_is_enabled())
@@ -101,6 +103,7 @@ supervisor_prompt = ChatPromptTemplate.from_messages(
 ).partial(options=str(supervisor_options_for_next), members=", ".join(supervisor_members))
 
 
+
 def news_and_sentiment_retrieval_node(state: AgentState) -> Command[Literal["data_team_leader"]]:
     """
     금융 뉴스 및 애널리스트 의견 수집
@@ -172,7 +175,6 @@ def financial_statement_retrieval_node(state: AgentState) -> Command[Literal["da
         goto='data_team_leader'
     )
 
-
 class DataTeamRouter(TypedDict):
     """Worker to route to next. If no workers needed or question is vague, route to FINISH."""
     next: Literal[*data_retrieval_options_for_next]
@@ -193,7 +195,6 @@ def data_team_leader_node(state: AgentState) -> Command[Literal[*data_retrieval_
     
     return Command(goto=goto)
 
-
 def data_cleansing_node(state: AgentState) -> Command[Literal["data_team_leader"]]:
 
     query = state['query']
@@ -209,7 +210,7 @@ class Router(TypedDict):
     next: Literal[*supervisor_options_for_next]
     
 
-def supervisor_node(state: AgentState) -> Command[Literal[*supervisor_members, "reporter"]]:
+def supervisor_node(state: AgentState) -> Command[Literal[*supervisor_members, END]]:
     """
     supervisor node 
     주어진 State를 기반으로 각 worker의 결과를 종합하고,
@@ -228,7 +229,7 @@ def supervisor_node(state: AgentState) -> Command[Literal[*supervisor_members, "
 
     goto = response["next"]
     if goto == "FINISH":
-        goto = "reporter"
+        goto = END
 
     return Command(goto=goto)
 
@@ -245,11 +246,14 @@ graph_builder.add_node("economic_data_retrieval", economic_data_retrieval_node)
 graph_builder.add_node("insider_team_leader", insider_graph)
 graph_builder.add_node("reporter", report_graph)
 graph_builder.add_node("general_team_leader", general_graph)
+graph_builder.add_node("analyst_team_leader", analyst_graph)
 
 graph_builder.add_edge(START, "supervisor")
 graph_builder.add_edge("insider_team_leader", "data_team_leader")
+graph_builder.add_edge("analyst_team_leader", "reporter")
 graph_builder.add_edge("reporter", END)
 graph_builder.add_edge("general_team_leader", END)
 
 graph = graph_builder.compile()
+
 
