@@ -38,7 +38,8 @@ agent_configs: dict[str, AgentConfig] = {
         "members": [
             "news_and_sentiment_retrieval", "market_data_retrieval", 
             "financial_statement_retrieval","insider_team_leader",
-            "economic_data_retrieval", "data_cleansing"
+            "economic_data_retrieval", "data_cleansing", 
+            "analyst_team_leader"
             ] 
     },
     "data_cleansing_agent": {
@@ -85,6 +86,13 @@ agent_configs: dict[str, AgentConfig] = {
         ],
         "prompt": get_international_insider_researcher_prompt(),
         "agent_type": "worker",
-    }
+    },
+    "anaylst_team_leader": {
+        "tools": [
+            MarketDataTools.get_websearch_tool
+            ],
+        "prompt": get_analyst_team_leader_prompt(),
+        "agent_type": "supervisor",
+    },
 
 }
