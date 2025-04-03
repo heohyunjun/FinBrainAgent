@@ -1,8 +1,8 @@
 from typing import TypedDict, List, Optional, Literal
-from sec_tool.market_data_tool import MarketDataTools, FinancialDataTools, EconomicDataTools
-from sec_tool.insider_trade_tool import SECInsiderTradeAPI,SEC13D13GAPI, SEC13FHoldingsAPI
+from tools.market_data_tool import MarketDataTools, FinancialDataTools, EconomicDataTools
+from tools.sec_insider_trade_tool import SECInsiderTradeAPI,SEC13D13GAPI, SEC13FHoldingsAPI
 from agents.prompt_utils import *
-from dart_tool.dart_tool_registry import DartToolRegistry
+from tools.dart_tool_registry import DartToolRegistry
 
 dart_registry = DartToolRegistry()
 
