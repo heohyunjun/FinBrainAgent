@@ -6,12 +6,12 @@ from langchain.tools import tool
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 
-from dart_tool.dart_treasury_stock_decision_field_definitions import (
+from field_definitions.dart_treasury_stock_decision_field_definitions import (
     Dart_TreasuryStockDispositionDecision_UnNecessary_Fields as DTUF,
     Dart_TreasuryStockAcquisitionDecision_UnNecessary_Fields as DTAUF,
     )
 
-from dart_tool.dart_treasury_stock_trust_field_definitions import(
+from field_definitions.dart_treasury_stock_trust_field_definitions import(
     Dart_TreasuryStockTrustContract_Unnecessary_Fields as DTSTCUF,
     Dart_TreasuryStockTrustCancel_Unnecessary_Fields as DTSTCUF
 )

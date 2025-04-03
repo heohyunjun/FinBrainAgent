@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from langchain.tools import tool
 from langchain_community.tools import DuckDuckGoSearchRun
 
-from sec_tool.sec_financial_fiedls_definitions import FinancialNecessaryFields
+from field_definitions.sec_financial_fiedls_definitions import FinancialNecessaryFields
 
 
 # 환경 변수 로드
