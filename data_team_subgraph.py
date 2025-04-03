@@ -67,8 +67,6 @@ data_retrieval_leader_prompt = ChatPromptTemplate.from_messages(
             "system",
             "Given the conversation above, who should act next? "
             "Or should we FINISH? Select one of: {options}. "
-            "Return a JSON with 'next', 'is_vague', and optionally 'response' if vague. "
-            "If not vague and no clarification is needed, leave 'response' empty."
         ),
     ]
 ).partial(options=str(data_retrieval_options_for_next), members=", ".join(data_retrieval_team_members))
@@ -102,7 +100,8 @@ supervisor_prompt = ChatPromptTemplate.from_messages(
     ]
 ).partial(options=str(supervisor_options_for_next), members=", ".join(supervisor_members))
 
-def news_and_sentiment_retrieval_node(state: AgentState) -> Command[Literal["data_retrieval_leader"]]:
+
+def news_and_sentiment_retrieval_node(state: AgentState) -> Command[Literal["data_team_leader"]]:
     """
     금융 뉴스 및 애널리스트 의견 수집
 
@@ -118,10 +117,12 @@ def news_and_sentiment_retrieval_node(state: AgentState) -> Command[Literal["dat
     # 결과 메시지를 업데이트하고 supervisor node로 이동합니다.
     return Command(
         update={'messages': [HumanMessage(content=result['messages'][-1].content, name='news_and_sentiment_retrieval')]},
-        goto='data_retrieval_leader'
+        goto='data_team_leader'
     )
 
-def market_data_retrieval_node(state: AgentState) -> Command[Literal["data_retrieval_leader"]]:
+
+
+def market_data_retrieval_node(state: AgentState) -> Command[Literal["data_team_leader"]]:
     """
     실시간 주가 및 거래량 수집
     Args:
@@ -134,10 +135,10 @@ def market_data_retrieval_node(state: AgentState) -> Command[Literal["data_retri
 
     return Command(
         update={'messages': [HumanMessage(content=result['messages'][-1].content, name='market_data_retrieval')]},
-        goto='data_retrieval_leader'
+        goto='data_team_leader'
     )
 
-def economic_data_retrieval_node(state: AgentState) -> Command[Literal["data_retrieval_leader"]]:
+def economic_data_retrieval_node(state: AgentState) -> Command[Literal["data_team_leader"]]:
     """
     거시경제 데이터(GDP, 금리, 인플레이션) 수집
     Args:
@@ -150,11 +151,11 @@ def economic_data_retrieval_node(state: AgentState) -> Command[Literal["data_ret
 
     return Command(
         update={'messages': [HumanMessage(content=result['messages'][-1].content, name='economic_data_retrieval')]},
-        goto='data_retrieval_leader'
+        goto='data_team_leader'
     )
 
 
-def financial_statement_retrieval_node(state: AgentState) -> Command[Literal["data_retrieval_leader"]]:
+def financial_statement_retrieval_node(state: AgentState) -> Command[Literal["data_team_leader"]]:
     """
     회사 재무 보고서와 주요 사건 관련 자료를 조사하는 노드.
     손익계산서 데이터와 재무 및 주요 사건 관련 SEC 보고서를 처리합니다.
@@ -168,68 +169,40 @@ def financial_statement_retrieval_node(state: AgentState) -> Command[Literal["da
     result = financial_statement_retrieval_agent.invoke(state)
     return Command(
         update={'messages': [HumanMessage(content=result['messages'][-1].content, name='financial_statement_retrieval')]},
-        goto='data_retrieval_leader'
+        goto='data_team_leader'
     )
+
 
 class DataTeamRouter(TypedDict):
     """Worker to route to next. If no workers needed or question is vague, route to FINISH."""
     next: Literal[*data_retrieval_options_for_next]
-    is_vague: bool  # 질문이 모호한지 여부
-    response: Optional[str]
 
-def data_retrieval_leader_node(state: AgentState) -> Command[Literal[*data_retrieval_team_members, "data_cleansing"]]:
-    """
-    supervisor node 
-    주어진 State를 기반으로 각 worker의 결과를 종합하고,
-    다음에 수행할 worker를 결정
-    모든 작업이 완료되면 data_cleansing node로 이동
 
-    Args:
-        state (AgentState): 현재 메시지 상태를 나타내는 객체
+def data_team_leader_node(state: AgentState) -> Command[Literal[*data_retrieval_team_members, "reporter"]]:
 
-    Returns:
-        Command: 다음에 수행할 worker 또는 data_cleansing node로 이동하기 위한 명령 반환 
-    """
-
+    query = state['query']
     data_retrieval_team_chain = data_retrieval_leader_prompt | llm.with_structured_output(DataTeamRouter)
-    response= data_retrieval_team_chain.invoke(state)
+    response= data_retrieval_team_chain.invoke({"messages" : state["messages"], "query" : query})
 
 
     goto = response["next"]
-    if response["is_vague"]:
-        # 모호한 경우 reporter로 이동, response가 있으면 메시지 추가
-        return Command(
-            update={'messages': [HumanMessage(content=response["response"], name='data_retrieval_leader')] if response["response"] else None},
-            goto='reporter'
-        )
-    elif goto == "FINISH":
-        goto = "data_cleansing"  # 정상 종료 시
 
+    if goto == "FINISH":
+        goto = "reporter"  # 정상 종료 시
+
+    
     return Command(goto=goto)
 
-def data_cleansing_node(state: AgentState) -> Command[Literal["supervisor"]]:
-    """
-    데이터 클렌징 노드. 수집된 데이터를 정제하여 supervisor로 전달
 
-    Args:
-        state (MessagesState): 현재 메시지 상태를 나타내는 객체
-
-    Returns:
-        dict: 분석 결과 메시지를 포함하는 딕셔너리를 반환
-    """
-
-    class CleanedData(BaseModel):
-        relevant_data: str = Field(
-            ..., description="사용자의 질문과 직접 연관이 있고, 중복 및 불필요한 정보가 제거된 정제된 데이터"
-        )
+def data_cleansing_node(state: AgentState) -> Command[Literal["data_team_leader"]]:
 
     query = state['query']
-    cleaning_chain = data_cleansing_prompt | llm.with_structured_output(CleanedData)
+    cleaning_chain = data_cleansing_prompt | llm | StrOutputParser()
     result = cleaning_chain.invoke({"messages" : state['messages'], "query" : query})
 
     return Command(
-        update={'messages': [HumanMessage(content=result.relevant_data, name='data_cleansing')]},
-        goto='supervisor'
+        update={'messages': [HumanMessage(content=result, name='data_cleansing')]},
+        goto='data_team_leader'
     )
 
 class Router(TypedDict):
@@ -266,7 +239,7 @@ graph_builder.add_node("supervisor", supervisor_node)
 graph_builder.add_node("news_and_sentiment_retrieval", news_and_sentiment_retrieval_node)
 graph_builder.add_node("market_data_retrieval", market_data_retrieval_node)
 graph_builder.add_node("financial_statement_retrieval", financial_statement_retrieval_node)
-graph_builder.add_node("data_retrieval_leader", data_retrieval_leader_node)
+graph_builder.add_node("data_team_leader", data_team_leader_node)
 graph_builder.add_node("data_cleansing", data_cleansing_node)
 graph_builder.add_node("economic_data_retrieval", economic_data_retrieval_node)
 graph_builder.add_node("insider_team_leader", insider_graph)
@@ -274,8 +247,9 @@ graph_builder.add_node("reporter", report_graph)
 graph_builder.add_node("general_team_leader", general_graph)
 
 graph_builder.add_edge(START, "supervisor")
-graph_builder.add_edge("insider_team_leader", "data_retrieval_leader")
+graph_builder.add_edge("insider_team_leader", "data_team_leader")
 graph_builder.add_edge("reporter", END)
 graph_builder.add_edge("general_team_leader", END)
 
 graph = graph_builder.compile()
+
