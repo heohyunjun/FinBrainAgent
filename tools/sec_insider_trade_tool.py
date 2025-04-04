@@ -46,7 +46,37 @@ class SECBaseAPI:
             print(f"요청 실패 상태 코드: {status}, 응답: {text}, 오류: {str(e)}")
             return None
 
+    @staticmethod
+    def resolve_date_range(
+        reference_date: Optional[str] = None,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        default_days: int = 30
+    ) -> tuple[str, str, str]:
+        """
+        기준일(reference_date), 시작일(start_date), 종료일(end_date)을 공통 로직으로 처리하는 함수.
+        주어진 reference_date를 기준으로 start_date 또는 end_date가 비어있을 경우 기본값으로 채운다.
 
+        Args:
+            reference_date (str, optional): 기준 날짜 ("YYYY-MM-DD"). 기본값은 오늘.
+            start_date (str, optional): 조회 시작일
+            end_date (str, optional): 조회 종료일
+            default_days (int, optional): 기준일로부터 몇 일 전을 기본 시작일로 볼지 (기본: 30일)
+
+        Returns:
+            (reference_date, start_date, end_date) 튜플
+        """
+        if reference_date is None:
+            reference_date = datetime.now().strftime("%Y-%m-%d")
+
+        if end_date is None:
+            end_date = reference_date
+
+        if start_date is None:
+            start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=default_days)).strftime("%Y-%m-%d")
+
+        return reference_date, start_date, end_date
+    
 class SECInsiderTradeAPI(SECBaseAPI):
     """
     SEC 내부자 거래 API 클래스.
@@ -154,33 +184,6 @@ class SECInsiderTradeAPI(SECBaseAPI):
         transaction_type: str = None,
         start_date: str = None,
         end_date: str = None,
-        from_value: int = 0
-    ) -> dict:
-        """
-        SEC Insider Trading API를 호출하여 지정된 조건에 맞는 내부자 거래 데이터를 가져옵니다.
-
-        Args:
-            ticker (str, optional): 검색할 기업의 주식 티커 (예: "TSLA").
-            owner (str, optional): 내부자의 이름 (예: "Elon Musk").
-            transaction_type (str, optional): 거래 유형 (예: "P" (매수), "S" (매도)).
-            start_date (str, optional): 검색 시작 날짜 ("YYYY-MM-DD").
-            end_date (str, optional): 검색 종료 날짜 ("YYYY-MM-DD").
-            from_value (int, optional): 페이징 시작 위치 (기본값: 0).
-
-        Returns:
-            dict: 필터링된 내부자 거래 데이터.
-        """
-        query = SECInsiderTradeAPI.build_query(ticker, owner, transaction_type, start_date, end_date)
-        raw_data = SECBaseAPI._fetch_sec_data(SECBaseAPI.SEC_INSIDER_TRADE_API_URL, query, from_value)
-        return SECInsiderTradeAPI.filter_response(raw_data) if raw_data else None
-
-    @tool
-    def fetch_filings_form3_4_5(
-        ticker: str = None,
-        owner: str = None,
-        transaction_type: str = None,
-        start_date: str = None,
-        end_date: str = None,
         from_value: int = 0,
         reference_date: str = None
         
@@ -199,26 +202,13 @@ class SECInsiderTradeAPI(SECBaseAPI):
         Returns:
             dict: 필터링된 내부자 거래 데이터.
         """
+        reference_date, start_date, end_date = SECBaseAPI.resolve_date_range(reference_date, start_date, end_date)
 
-        if reference_date is None:
-            reference_date = datetime.now().strftime("%Y-%m-%d")
-
-        if end_date is None:
-            end_date = reference_date
-
-        if start_date is None:
-            # 기본적으로 최근 30일 기준
-            start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
-
-        result = SECInsiderTradeAPI._fetch_filings_core(
-            ticker, owner, transaction_type, start_date, end_date, from_value
-        )
-    
-        # 명확한 결과가 없음을 메시지로 반환
-        if not result or len(result) == 0:
-            return {"message": f"No SEC filings found for {ticker or owner} between {start_date} and {end_date}."}
+        query = SECInsiderTradeAPI.build_query(ticker, owner, transaction_type, start_date, end_date)
+        raw_data = SECBaseAPI._fetch_sec_data(SECBaseAPI.SEC_INSIDER_TRADE_API_URL, query, from_value)
         
-        return {"message": result}
+        return SECInsiderTradeAPI.filter_response(raw_data) if raw_data else None
+
 
 class SEC13D13GAPI(SECBaseAPI):
     """
@@ -332,38 +322,6 @@ class SEC13D13GAPI(SECBaseAPI):
     
     @staticmethod
     def _fetch_filings_core(
-        issuer_name: str = None, 
-        owner: str = None,
-        start_date: str = None,
-        end_date: str = None,
-        min_percent: float = None,
-        form_type: str = None,
-        cik: str = None,
-        from_value: int = 0,
-    ) -> dict:
-        """
-        SEC 13D/13G API를 호출하여 지정된 조건에 맞는 투자 지분 공개 데이터를 가져옵니다.
-
-        Args:
-            issuer_name (str, optional): 검색할 기업의 명칭 (예: "Tesla, Inc."). 
-            owner (str, optional): 투자자 이름 (예: "BlackRock Inc.").
-            start_date (str, optional): 검색 시작 날짜 ("YYYY-MM-DD").
-            end_date (str, optional): 검색 종료 날짜 ("YYYY-MM-DD").
-            min_percent (float, optional): 최소 지분율 필터 (예: 5% 이상이면 5 입력).
-            form_type (str, optional): 보고서 유형 (예: 13D, 13G, 13D/A).
-            cik (str, optional): 특정 기업 CIK 검색.
-            from_value (int, optional): 페이징 시작 위치 (기본값: 0).
-
-        Returns:
-            dict: 필터링된 13D/13G 데이터.
-        """
-        query = SEC13D13GAPI.build_query(issuer_name, owner, start_date, end_date, min_percent, form_type, cik)
-        raw_data = SECBaseAPI._fetch_sec_data(SECBaseAPI.SEC_13D_13G_API_URL, query, from_value)
-        # return raw_data
-        return SEC13D13GAPI.filter_response(raw_data) if raw_data else None
-
-    @tool
-    def fetch_filings_form13d_13g(
         issuer_name: str = None,  
         owner: str = None,
         start_date: str = None,
@@ -391,25 +349,12 @@ class SEC13D13GAPI(SECBaseAPI):
         Returns:
             dict: SEC API에서 반환된 JSON 데이터. 성공 시 13D/13G 데이터가 포함된 딕셔너리, 실패 시 None.
         """
-        if reference_date is None:
-            reference_date = datetime.now().strftime("%Y-%m-%d")
+        reference_date, start_date, end_date = SECBaseAPI.resolve_date_range(reference_date, start_date, end_date)
 
-        if end_date is None:
-            end_date = reference_date
-
-        if start_date is None:
-            # 기본적으로 최근 30일 기준
-            start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
-    
-        result = SEC13D13GAPI._fetch_filings_core(
-            issuer_name, owner, start_date, end_date, min_percent, form_type, cik, from_value
-        )
-
-        # 명확한 결과가 없음을 메시지로 반환
-        if not result or len(result) == 0:
-            return {"message": f"No SEC filings found for {issuer_name or owner} between {start_date} and {end_date}."}
-        
-        return {"message": result}
+        query = SEC13D13GAPI.build_query(issuer_name, owner, start_date, end_date, min_percent, form_type, cik)
+        raw_data = SECBaseAPI._fetch_sec_data(SECBaseAPI.SEC_13D_13G_API_URL, query, from_value)
+        # return raw_data
+        return SEC13D13GAPI.filter_response(raw_data) if raw_data else None
 
 class SEC13FHoldingsAPI(SECBaseAPI):
     """
@@ -539,31 +484,6 @@ class SEC13FHoldingsAPI(SECBaseAPI):
         max_value: int = None,
         min_shares: int = None,
         max_shares: int = None,
-        from_value: int = 0
-    ) -> dict:
-
-        query = SEC13FHoldingsAPI.build_query(
-            cik, company_name, issuer_name, ticker, 
-            cusip, start_date, end_date, min_value, 
-            max_value, min_shares, max_shares
-        )
-        raw_data = SECBaseAPI._fetch_sec_data(SECBaseAPI.SEC_13F_HOLDINGS_API_URL, query, from_value)
-        # return raw_data
-        return SEC13FHoldingsAPI.filter_response(raw_data) if raw_data else None
-
-    @tool
-    def fetch_filings_13f(
-        cik: str = None,
-        company_name: str = None,
-        issuer_name: str = None,
-        ticker: str = None,
-        cusip: str = None,
-        start_date: str = None,
-        end_date: str = None,
-        min_value: int = None,
-        max_value: int = None,
-        min_shares: int = None,
-        max_shares: int = None,
         from_value: int = 0,
         reference_date: str = None
     ) -> dict:
@@ -588,24 +508,14 @@ class SEC13FHoldingsAPI(SECBaseAPI):
         Returns:
             dict: SEC API에서 반환된 JSON 데이터. 성공 시 13F Holdings 데이터가 포함된 딕셔너리, 실패 시 None.
         """
-
-        if reference_date is None:
-            reference_date = datetime.now().strftime("%Y-%m-%d")
-
-        if end_date is None:
-            end_date = reference_date
-
-        if start_date is None:
-            # 기본적으로 최근 30일 기준
-            start_date = (datetime.strptime(reference_date, "%Y-%m-%d") - timedelta(days=30)).strftime("%Y-%m-%d")
-
-        result= SEC13FHoldingsAPI._fetch_filings_core(
-            cik, company_name, issuer_name, ticker, cusip, start_date, end_date,
-            min_value, max_value, min_shares, max_shares, from_value
-        )
-
-        # 명확한 결과가 없음을 메시지로 반환
-        if not result or len(result) == 0:
-            return {"message": f"No SEC filings found for {cik or company_name} between {start_date} and {end_date}."}
         
-        return {"message": result}
+        reference_date, start_date, end_date = SECBaseAPI.resolve_date_range(reference_date, start_date, end_date)
+        query = SEC13FHoldingsAPI.build_query(
+            cik, company_name, issuer_name, ticker, 
+            cusip, start_date, end_date, min_value, 
+            max_value, min_shares, max_shares
+        )
+        raw_data = SECBaseAPI._fetch_sec_data(SECBaseAPI.SEC_13F_HOLDINGS_API_URL, query, from_value)
+        # return raw_data
+        return SEC13FHoldingsAPI.filter_response(raw_data) if raw_data else None
+

@@ -3,9 +3,10 @@ from tools.market_data_tool import MarketDataTools, FinancialDataTools, Economic
 from tools.sec_insider_trade_tool import SECInsiderTradeAPI,SEC13D13GAPI, SEC13FHoldingsAPI
 from agents.prompt_utils import *
 from tools.dart_tool_registry import DartToolRegistry
+from tools.sec_tool_registry import SecToolRegistry
 
 dart_registry = DartToolRegistry()
-
+sec_registry = SecToolRegistry()
 class AgentConfig(TypedDict, total=False):
     tools: List
     prompt: Optional[str]
@@ -80,9 +81,9 @@ agent_configs: dict[str, AgentConfig] = {
     },
     "international_insider_researcher": {
         "tools": [
-            SECInsiderTradeAPI.fetch_filings_form3_4_5,
-            SEC13D13GAPI.fetch_filings_form13d_13g,
-            SEC13FHoldingsAPI.fetch_filings_13f  
+            sec_registry.get_insider_trading_tool,
+            sec_registry.get_ownership_disclosure_tool,
+            sec_registry.get_institutional_holdings_tool  
         ],
         "prompt": get_international_insider_researcher_prompt(),
         "agent_type": "worker",
