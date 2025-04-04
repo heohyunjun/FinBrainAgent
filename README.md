@@ -2,7 +2,7 @@
 FinBrain은 금융(Financial)과 두뇌(Brain)의 결합을 통해, AI 기반의 종합 금융 분석 플랫폼으로 발전시키는 것을 목표로 함
 
 ## 1.1 워크플로우
-![alt text](img/finbrain_workflow.png)
+![alt text](img/workflow.png)
 
 
 
