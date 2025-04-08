@@ -29,6 +29,7 @@ class AgentState(MessagesState):
     query: str
 
 llm = ChatOpenAI(model="gpt-4o-mini-2024-07-18")
+data_team_leader_llm  = ChatOpenAI(model="gpt-4o-mini-2024-07-18")
 
 # 시장 조사 에이전트
 news_and_sentiment_retrieval_agent = create_react_agent(
@@ -74,19 +75,6 @@ data_retrieval_leader_prompt = ChatPromptTemplate.from_messages(
 ).partial(options=str(data_retrieval_options_for_next), members=", ".join(data_retrieval_team_members))
 
 
-data_cleansing_system_prompt = agent_configs['data_cleansing_agent']['prompt']
-data_cleansing_prompt = ChatPromptTemplate.from_messages(
-    [
-        ("system", data_cleansing_system_prompt),
-        MessagesPlaceholder(variable_name="messages"),
-        (
-            "system",
-            "Given the conversation above, "
-            "Refine and process this data to align with the user's original question : {query}"
-        )
-    ]
-)
-
 supervisor_members = agent_configs['supervisor']['members']
 supervisor_options_for_next = supervisor_members + ["FINISH"]
 supervisor_system_prompt = agent_configs['supervisor']['prompt']
@@ -101,6 +89,7 @@ supervisor_prompt = ChatPromptTemplate.from_messages(
         ),
     ]
 ).partial(options=str(supervisor_options_for_next), members=", ".join(supervisor_members))
+
 
 
 
@@ -183,7 +172,7 @@ class DataTeamRouter(TypedDict):
 def data_team_leader_node(state: AgentState) -> Command[Literal[*data_retrieval_team_members, "reporter"]]:
 
     query = state['query']
-    data_retrieval_team_chain = data_retrieval_leader_prompt | llm.with_structured_output(DataTeamRouter)
+    data_retrieval_team_chain = data_retrieval_leader_prompt | data_team_leader_llm.with_structured_output(DataTeamRouter)
     response= data_retrieval_team_chain.invoke({"messages" : state["messages"], "query" : query})
 
 
@@ -195,16 +184,7 @@ def data_team_leader_node(state: AgentState) -> Command[Literal[*data_retrieval_
     
     return Command(goto=goto)
 
-def data_cleansing_node(state: AgentState) -> Command[Literal["data_team_leader"]]:
 
-    query = state['query']
-    cleaning_chain = data_cleansing_prompt | llm | StrOutputParser()
-    result = cleaning_chain.invoke({"messages" : state['messages'], "query" : query})
-
-    return Command(
-        update={'messages': [HumanMessage(content=result, name='data_cleansing')]},
-        goto='data_team_leader'
-    )
 
 class Router(TypedDict):
     next: Literal[*supervisor_options_for_next]
@@ -241,7 +221,6 @@ graph_builder.add_node("news_and_sentiment_retrieval", news_and_sentiment_retrie
 graph_builder.add_node("market_data_retrieval", market_data_retrieval_node)
 graph_builder.add_node("financial_statement_retrieval", financial_statement_retrieval_node)
 graph_builder.add_node("data_team_leader", data_team_leader_node)
-graph_builder.add_node("data_cleansing", data_cleansing_node)
 graph_builder.add_node("economic_data_retrieval", economic_data_retrieval_node)
 graph_builder.add_node("insider_team_leader", insider_graph)
 graph_builder.add_node("reporter", report_graph)
@@ -255,5 +234,6 @@ graph_builder.add_edge("reporter", END)
 graph_builder.add_edge("general_team_leader", END)
 
 graph = graph_builder.compile()
+
 
 
