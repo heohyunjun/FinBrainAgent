@@ -49,7 +49,10 @@ class DartToolRegistry:
             reference_date=reference_date,
             limit=limit
         )
-        return df.to_dict(orient="records")
+        if df.empty:
+            return {"messages": f"해당 정보로 데이터를 찾을 수 없습니다."}
+        else:
+            return {"messages" : df.to_dict(orient="records")}
 
     @staticmethod
     @tool
@@ -98,7 +101,11 @@ class DartToolRegistry:
             reference_date=reference_date,
             limit=limit
         )
-        return df.to_dict(orient="records")
+
+        if df.empty:
+            return {"messages": f"해당 정보로 데이터를 찾을 수 없습니다."}
+        else:
+            return {"messages" : df.to_dict(orient="records")}
 
     @staticmethod
     @tool
@@ -132,7 +139,10 @@ class DartToolRegistry:
             reference_date=reference_date,
             limit=limit
         )
-        return df.to_dict(orient="records")
+        if df.empty:
+            return {"messages": f"해당 정보로 데이터를 찾을 수 없습니다."}
+        else:
+            return {"messages" : df.to_dict(orient="records")}
 
     @staticmethod
     @tool
@@ -166,7 +176,10 @@ class DartToolRegistry:
             reference_date=reference_date,
             limit=limit
         )
-        return df.to_dict(orient="records")
+        if df.empty:
+            return {"messages": f"해당 정보로 데이터를 찾을 수 없습니다."}
+        else:
+            return {"messages" : df.to_dict(orient="records")}
 
     @staticmethod
     @tool
@@ -200,7 +213,10 @@ class DartToolRegistry:
             reference_date=reference_date,
             limit=limit
         )
-        return df.to_dict(orient="records")
+        if df.empty:
+            return {"messages": f"해당 정보로 데이터를 찾을 수 없습니다."}
+        else:
+            return {"messages" : df.to_dict(orient="records")}
 
     @staticmethod
     @tool
@@ -234,4 +250,7 @@ class DartToolRegistry:
             reference_date=reference_date,
             limit=limit
         )
-        return df.to_dict(orient="records")
+        if df.empty:
+            return {"messages": f"해당 정보로 데이터를 찾을 수 없습니다."}
+        else:
+            return {"messages" : df.to_dict(orient="records")}
