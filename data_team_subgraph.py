@@ -18,7 +18,7 @@ from langchain_openai import ChatOpenAI
 
 from agents.agent_library import agent_configs
 from team_graph.report_team_subgraph import report_graph
-from team_graph.general_chat_subgraph import general_graph
+from team_graph.general_team_subgraph import general_graph
 from team_graph.insider_team_graph import insider_graph 
 from team_graph.analyst_team_graph import analyst_graph
 # 환경 변수 로드
@@ -190,7 +190,7 @@ class Router(TypedDict):
     next: Literal[*supervisor_options_for_next]
     
 
-def supervisor_node(state: AgentState) -> Command[Literal[*supervisor_members, END]]:
+def supervisor_node(state: AgentState) -> Command[Literal[*supervisor_members]]:
     """
     supervisor node 
     주어진 State를 기반으로 각 worker의 결과를 종합하고,
@@ -208,8 +208,6 @@ def supervisor_node(state: AgentState) -> Command[Literal[*supervisor_members, E
     response= supervisor_chain.invoke(state)
 
     goto = response["next"]
-    if goto == "FINISH":
-        goto = END
 
     return Command(goto=goto)
 
