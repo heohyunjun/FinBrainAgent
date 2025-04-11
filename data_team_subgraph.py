@@ -17,8 +17,8 @@ from langsmith import utils
 from langchain_openai import ChatOpenAI
 
 from agents.agent_library import agent_configs
-from team_graph.report_team_subgraph import report_graph
-from team_graph.general_team_subgraph import general_graph
+from team_graph.report_team_graph import report_graph
+from team_graph.general_team_graph import general_graph
 from team_graph.insider_team_graph import insider_graph 
 from team_graph.analyst_team_graph import analyst_graph
 # 환경 변수 로드
