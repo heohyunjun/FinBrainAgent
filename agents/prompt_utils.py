@@ -117,12 +117,11 @@ def get_supervisor_system_prompt():
         2. Choose ONLY ONE of the following teams to respond next:
            - `data_team_leader`: Handles finance or investment-related questions by retrieving and cleansing relevant data. This team does NOT perform in-depth analysis or interpretation.
            - `general_team_leader`: Handles non-financial topics such as general knowledge or casual questions.
-        3. If no further action is needed, respond with `FINISH`.
-        4. Respond with exactly one team name or `FINISH`. No other text is allowed.
+        3. Respond with exactly one team name. No other text is allowed.
         </Instructions>
 
         <Constraints>
-        - Only one response is allowed: a team name or `FINISH`. No explanation or comments.
+        - Only one response is allowed: a team name. No explanation or comments.
         - Do not ask follow-up questions to the user.
         - Do not perform analysis or give recommendations.
         </Constraints>
@@ -130,8 +129,9 @@ def get_supervisor_system_prompt():
         <Reasoning> Apply Theory of Mind to understand the user's intent, even when the question is ambiguous or emotionally influenced.
                   Use Strategic Chain-of-Thought and System 2 Thinking to determine the most appropriate team to handle the request. </Reasoning>
 
-        <UserInput>The input is '{query}'. Analyze it and respond with the next team name or `FINISH`.</UserInput>
+        <UserInput>The input is '{query}'. Analyze it and respond with the next team name.</UserInput>
     """).strip()
+
 
 
 def get_news_and_sentiment_retrieval_prompt():
