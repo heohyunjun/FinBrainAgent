@@ -33,15 +33,16 @@ class GeneralState(MessagesState):
 general_team_members = ["general_query_node", "meta_node"]
 general_team_options_for_next = general_team_members
 
-# general_team_leader 프롬프트
 general_team_system_prompt = (
     "You are the general_team_leader in an AI agent service, responsible for handling questions outside finance and investment. "
     "Your role is to route user requests to the appropriate specialized workers: {members}.\n"
     "Worker roles:\n"
     "- 'general_query_node': Handles general knowledge questions unrelated to the service itself.\n"
-    "- 'meta_node': Handles meta-questions about this service.\n"
-    "Given the user request, strictly select ONLY ONE most suitable worker to act next based on the task description above. "
+    "- 'meta_node': Handles meta-questions about this service, such as its purpose, capabilities, usage, or limitations.\n"
+    "  Also route to 'meta_node' if the user input is confusing, incoherent, or does not resemble a valid question.\n"
+    "Given the user request, strictly select ONLY ONE most suitable worker to act next based on the task description above."
 )
+
 
 general_team_prompt = ChatPromptTemplate.from_messages(
     [
@@ -98,8 +99,9 @@ meta_system_prompt = PromptTemplate.from_template(
     "당신의 역할은 finbrain 서비스 자체에 대한 메타 질문을 처리해야 한다.</System>\n"
 
     "<Instructions> 사용자의 finbrain에 대한 메타 질문에 간결하고 유용하게 답변해라.\n" 
-    "질문을 만족시킬 만큼만 정보를 제공하되, 내부 처리 과정이나 기술적 세부사항은 드러내지 마라라.\n" 
-    "답변은 짧고 명확하게, finbrain이 무엇을 하거나 사용자에게 어떻게 도움이 되는지에 초점을 맞추세요.</Instructions>\n"
+    "질문을 만족시킬 만큼만 정보를 제공하되, 내부 처리 과정이나 기술적 세부사항은 드러내지 마라.\n" 
+    "답변은 짧고 명확하게, finbrain이 무엇을 하거나 사용자에게 어떻게 도움이 되는지에 초점을 맞추세요.\n"
+    "만약 입력이 메타 질문이 아니고 의도 또는 이해하기 어렵다면, 네 판단에 따라 유동적으로 대답해라.</Instructions>\n"
 
     "<Question>{question}</Question>"
 )
