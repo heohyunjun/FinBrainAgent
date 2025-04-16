@@ -15,6 +15,7 @@ from langgraph.prebuilt import create_react_agent
 
 from langsmith import utils 
 from langchain_openai import ChatOpenAI
+from langgraph.checkpoint.memory import MemorySaver
 
 from agents.agent_library import agent_configs
 from team_graph.report_team_graph import report_graph
@@ -211,7 +212,7 @@ def supervisor_node(state: AgentState) -> Command[Literal[*supervisor_members]]:
 
     return Command(goto=goto)
 
-
+memory = MemorySaver()
 graph_builder = StateGraph(AgentState)
 
 graph_builder.add_node("supervisor", supervisor_node)
@@ -231,7 +232,7 @@ graph_builder.add_edge("analyst_team_leader", "reporter")
 graph_builder.add_edge("reporter", END)
 graph_builder.add_edge("general_team_leader", END)
 
-graph = graph_builder.compile()
+graph = graph_builder.compile(checkpointer=memory)
 
 
 

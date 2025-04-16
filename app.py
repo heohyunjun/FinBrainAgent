@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from uuid import uuid4
 from typing import Annotated, Optional, List
+from dotenv import load_dotenv
 
 from pydantic import BaseModel
 from fastapi import FastAPI
@@ -14,7 +15,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.graph.message import add_messages
 
 from data_team_subgraph import graph as main_graph
-
+load_dotenv()
 # =======================
 # 로그 설정
 # =======================
@@ -42,7 +43,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[os.getenv("FRONTEND_ORIGIN")],
     allow_methods=["*"],
     allow_headers=["*"],
 )
