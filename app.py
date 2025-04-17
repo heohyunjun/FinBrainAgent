@@ -63,7 +63,7 @@ class AgentState(BaseModel):
 memory_store = {}  # key: thread_id, value: List[BaseMessage]
 
 # =======================
-# PI 엔드포인트
+# aPI 엔드포인트
 # =======================
 @app.post("/chat")
 async def handle_chat(request: UserInput):
@@ -91,7 +91,7 @@ async def handle_chat(request: UserInput):
         ai_msg = response["messages"][-1]
         assistant_content = ai_msg.content
 
-        memory_store[thread_id] = prev_messages + [human_msg, ai_msg]
+        memory_store[thread_id] = prev_messages + [human_msg, HumanMessage(content =assistant_content)]
 
         logger.info(f"LangGraph 응답 생성 완료: {assistant_content}")
 
