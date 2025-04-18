@@ -48,7 +48,10 @@ agent_configs: dict[str, AgentConfig] = {
         "agent_type": "worker"
     },
     "news_and_sentiment_retrieval_agent": {
-        "tools": [MarketDataTools.get_stock_news, MarketDataTools.get_websearch_tool] ,
+        "tools": [
+            MarketDataTools.get_stock_news, 
+            {"fallback":MarketDataTools.get_websearch_tool, "mcp":"search"}
+            ] ,
         "prompt": get_news_and_sentiment_retrieval_prompt(),
         "agent_type": "worker"
     },
