@@ -5,6 +5,10 @@ from datetime import datetime
 from uuid import uuid4
 from typing import Annotated, Optional, List
 from contextlib import asynccontextmanager
+import time
+import asyncio
+import platform
+
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -12,42 +16,22 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+
 from langchain_core.messages import HumanMessage, AnyMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.graph.message import add_messages
-
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from utils.mcp_tool_mapping import bind_agent_tools, load_mcp_config
 from agents.agent_library import agent_configs
+
+from utils.logger import logger
 from main_graph import build_graph
-import time
-import asyncio
-import platform
+
 
 # if platform.system() == "Windows":
 #     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 load_dotenv()
-
-# =======================
-# 로그 설정
-# =======================
-log_dir = os.path.join(os.path.dirname(__file__), "logs")
-os.makedirs(log_dir, exist_ok=True)
-
-today = datetime.now().strftime("%Y-%m-%d")
-log_path = os.path.join(log_dir, f"{today}.log")
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(log_path, encoding="utf-8")
-    ]
-)
-
-logger = logging.getLogger(__name__)
 
 # =======================
 # FastAPI Lifespan 설정
