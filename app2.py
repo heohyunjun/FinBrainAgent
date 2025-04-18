@@ -17,7 +17,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.graph.message import add_messages
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
-from utils.mcp_tool_mapping import bind_agent_tools
+from utils.mcp_tool_mapping import bind_agent_tools, load_mcp_config
 from agents.agent_library import agent_configs
 from main_graph import build_graph
 import time
@@ -56,36 +56,37 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     if platform.system() == "Windows":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-    config_path = "mcp_config.json"
-    if os.path.exists(config_path):
-        with open(config_path, "r", encoding="utf-8") as f:
-            raw_config = json.load(f)
-        mcp_config = raw_config.get("mcpServers", {})
-        
-    else:
-        mcp_config = {}
 
-    client = MultiServerMCPClient(mcp_config)
-    await client.__aenter__()
-    print(2222222222)
-    app.state.mcp_client = client
+    client = None
+    try:
+        mcp_config = load_mcp_config()
+        client = MultiServerMCPClient(mcp_config)
+        await client.__aenter__()
 
-    app.state.mcp_tools = client.get_tools()
-    
-    logger.info(f"MCP 도구 {len(app.state.mcp_tools)}개 로드됨")
+        app.state.mcp_client = client
+        app.state.mcp_tools = client.get_tools()
+        logger.info(f"MCP 도구 {len(app.state.mcp_tools)}개 로드됨")
 
+    except Exception as e:
+        import traceback
+        logger.warning(f"MCP 초기화 실패: {e}\n{traceback.format_exc()}")
+        app.state.mcp_client = None
+        app.state.mcp_tools = []
 
-    resolved_configs = bind_agent_tools(agent_configs, app.state.mcp_tools)
-    app.state.main_graph = build_graph(resolved_configs)
-    logger.info("LangGraph 초기화 완료")
+    try:
+        resolved_configs = bind_agent_tools(agent_configs, app.state.mcp_tools)
+        app.state.main_graph = build_graph(resolved_configs)
+        logger.info("LangGraph 초기화 완료")
+    except Exception as e:
+        logger.error(f"LangGraph 초기화 실패: {e}")
+        app.state.main_graph = None
 
-    yield  # 앱 실행 시작
+    yield
 
-    # 종료 처리
-    client = getattr(app.state, "mcp_client", None)
     if client:
         await client.__aexit__(None, None, None)
-        logger.info("🧹 MCP 클라이언트 종료 완료")
+        logger.info("MCP 클라이언트 종료 완료")
+
 
 # =======================
 # FastAPI 앱 인스턴스 생성
