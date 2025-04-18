@@ -1,45 +1,79 @@
 import os
 import logging
+import json
 from datetime import datetime
 from uuid import uuid4
 from typing import Annotated, Optional, List
-from dotenv import load_dotenv
+from contextlib import asynccontextmanager
+import time
+import asyncio
+import platform
 
+
+from dotenv import load_dotenv
 from pydantic import BaseModel
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+
 from langchain_core.messages import HumanMessage, AnyMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.graph.message import add_messages
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
-from data_team_subgraph import graph as main_graph
+from utils.mcp_tool_mapping import bind_agent_tools, load_mcp_config
+from agents.agent_library import agent_configs
+
+from utils.logger import logger
+from main_graph import build_graph
+
 load_dotenv()
-# =======================
-# 로그 설정
-# =======================
-log_dir = os.path.join(os.path.dirname(__file__), "logs")
-os.makedirs(log_dir, exist_ok=True)
-
-today = datetime.now().strftime("%Y-%m-%d")
-log_path = os.path.join(log_dir, f"{today}.log")
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    handlers=[
-        logging.StreamHandler(),
-        logging.FileHandler(log_path, encoding="utf-8")
-    ]
-)
-
-logger = logging.getLogger(__name__)
 
 # =======================
-# FastAPI 설정
+# FastAPI Lifespan 설정
 # =======================
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    client = None
+    try:
+        config_path= "./mcp_config.json"
+        mcp_config = load_mcp_config(config_path)
+        client = MultiServerMCPClient(mcp_config)
+        await client.__aenter__()
+        logger.info(f"MCP 초기화 완료")
+
+        app.state.mcp_client = client
+        app.state.mcp_tools = client.get_tools()
+
+        logger.info(f"MCP 도구 로드 : {app.state.mcp_tools}")
+        logger.info(f"MCP 도구 {len(app.state.mcp_tools)}개 로드됨")
+
+    except Exception as e:
+        import traceback
+        logger.warning(f"MCP 초기화 실패: {e}\n{traceback.format_exc()}")
+        app.state.mcp_client = None
+        app.state.mcp_tools = []
+
+    try:
+        resolved_configs = bind_agent_tools(agent_configs, app.state.mcp_tools)
+        app.state.main_graph = build_graph(resolved_configs)
+        logger.info("LangGraph 초기화 완료")
+    except Exception as e:
+        logger.error(f"LangGraph 초기화 실패: {e}")
+        app.state.main_graph = None
+
+    yield
+
+    if client:
+        await client.__aexit__(None, None, None)
+        logger.info("MCP 클라이언트 종료 완료")
+
+
+# =======================
+# FastAPI 앱 인스턴스 생성
+# =======================
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -63,7 +97,7 @@ class AgentState(BaseModel):
 memory_store = {}  # key: thread_id, value: List[BaseMessage]
 
 # =======================
-# aPI 엔드포인트
+# API 엔드포인트
 # =======================
 @app.post("/chat")
 async def handle_chat(request: UserInput):
@@ -83,7 +117,8 @@ async def handle_chat(request: UserInput):
     )
 
     try:
-        response = await main_graph.ainvoke(state, config=config)
+        graph = app.state.main_graph
+        response = await graph.ainvoke(state, config=config)
 
         if not response.get("messages"):
             raise ValueError("LangGraph 응답에 메시지가 없습니다.")
@@ -91,7 +126,7 @@ async def handle_chat(request: UserInput):
         ai_msg = response["messages"][-1]
         assistant_content = ai_msg.content
 
-        memory_store[thread_id] = prev_messages + [human_msg, HumanMessage(content =assistant_content)]
+        memory_store[thread_id] = prev_messages + [human_msg, HumanMessage(content=assistant_content)]
 
         logger.info(f"LangGraph 응답 생성 완료: {assistant_content}")
 
@@ -104,7 +139,6 @@ async def handle_chat(request: UserInput):
 
     except Exception as e:
         memory_store[thread_id] = prev_messages + [human_msg]
-
         assistant_content = "AI 응답을 생성하지 못했습니다. 잠시 후 다시 시도해주세요."
         logger.error(f"LangGraph 실행 중 예외 발생: {e}")
 
