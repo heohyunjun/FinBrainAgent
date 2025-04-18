@@ -12,6 +12,7 @@ from team_graph.report_team_graph import report_graph
 from team_graph.general_team_graph import general_graph
 from team_graph.insider_team_graph import insider_graph 
 from team_graph.analyst_team_graph import analyst_graph
+from utils.logger import logger
 
 # Agent 상태 정의
 class AgentState(MessagesState):
@@ -26,6 +27,8 @@ data_team_leader_llm  = ChatOpenAI(model="gpt-4o-mini-2024-07-18")
 
 def build_graph(resolved_agent_configs: dict) -> StateGraph:
     # MCP 포함 agent 생성
+
+    logger.info(resolved_agent_configs['news_and_sentiment_retrieval_agent']['tools'])
     news_and_sentiment_retrieval_agent = create_react_agent(
         llm, 
         tools=resolved_agent_configs['news_and_sentiment_retrieval_agent']['tools'],
@@ -72,31 +75,31 @@ def build_graph(resolved_agent_configs: dict) -> StateGraph:
     class Router(TypedDict):
         next: Literal[*supervisor_options_for_next]
 
-    def news_and_sentiment_retrieval_node(state: AgentState):
-        result = news_and_sentiment_retrieval_agent.invoke(state)
+    async def news_and_sentiment_retrieval_node(state: AgentState):
+        result = await news_and_sentiment_retrieval_agent.ainvoke(state)
         return Command(update={'messages': [HumanMessage(content=result['messages'][-1].content, name='news_and_sentiment_retrieval')]}, goto='data_team_leader')
 
-    def market_data_retrieval_node(state: AgentState):
-        result = market_data_retrieval_agent.invoke(state)
+    async def market_data_retrieval_node(state: AgentState):
+        result = await market_data_retrieval_agent.ainvoke(state)
         return Command(update={'messages': [HumanMessage(content=result['messages'][-1].content, name='market_data_retrieval')]}, goto='data_team_leader')
 
-    def economic_data_retrieval_node(state: AgentState):
-        result = economic_data_retrieval_agent.invoke(state)
+    async def economic_data_retrieval_node(state: AgentState):
+        result = await economic_data_retrieval_agent.ainvoke(state)
         return Command(update={'messages': [HumanMessage(content=result['messages'][-1].content, name='economic_data_retrieval')]}, goto='data_team_leader')
 
-    def financial_statement_retrieval_node(state: AgentState):
-        result = financial_statement_retrieval_agent.invoke(state)
+    async def financial_statement_retrieval_node(state: AgentState):
+        result = await financial_statement_retrieval_agent.ainvoke(state)
         return Command(update={'messages': [HumanMessage(content=result['messages'][-1].content, name='financial_statement_retrieval')]}, goto='data_team_leader')
 
-    def data_team_leader_node(state: AgentState):
+    async def data_team_leader_node(state: AgentState):
         query = state['query']
         chain = data_retrieval_leader_prompt | data_team_leader_llm.with_structured_output(DataTeamRouter)
-        response = chain.invoke({"messages": state["messages"], "query": query})
+        response = await chain.ainvoke({"messages": state["messages"], "query": query})
         return Command(goto=response["next"] if response["next"] != "FINISH" else "reporter")
 
-    def supervisor_node(state: AgentState):
+    async def supervisor_node(state: AgentState):
         chain = supervisor_prompt | llm.with_structured_output(Router)
-        response = chain.invoke(state)
+        response = await chain.ainvoke(state)
         return Command(goto=response["next"])
 
     # 그래프 구성

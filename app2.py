@@ -21,6 +21,7 @@ from langchain_core.messages import HumanMessage, AnyMessage
 from langchain_core.runnables.config import RunnableConfig
 from langgraph.graph.message import add_messages
 from langchain_mcp_adapters.client import MultiServerMCPClient
+
 from utils.mcp_tool_mapping import bind_agent_tools, load_mcp_config
 from agents.agent_library import agent_configs
 
@@ -38,13 +39,10 @@ load_dotenv()
 # =======================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if platform.system() == "Windows":
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
     client = None
     try:
         config_path= "./mcp_config.json"
-        mcp_config = load_mcp_config()
+        mcp_config = load_mcp_config(config_path)
         client = MultiServerMCPClient(mcp_config)
         await client.__aenter__()
 
