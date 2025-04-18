@@ -33,3 +33,21 @@ def bind_agent_tools(agent_configs, mcp_tools):
         bound_configs[agent_name] = resolved
 
     return bound_configs
+
+
+def load_mcp_config(config_path: str = "mcp_config.json") -> dict:
+    """
+    MCP 설정 JSON 파일에서 "mcpServers" 항목을 로드하여 반환합니다.
+    파일이 없거나 유효하지 않은 경우 빈 딕셔너리를 반환합니다.
+    """
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, "r", encoding="utf-8") as f:
+                raw_config = json.load(f)
+            return raw_config.get("mcpServers", {})
+        except Exception as e:
+            logger.warning(f"MCP 설정 파일 파싱 실패: {e}")
+            return {}
+    else:
+        logger.warning(f"MCP 설정 파일이 존재하지 않습니다: {config_path}")
+        return {}
