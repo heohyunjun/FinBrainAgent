@@ -43,6 +43,7 @@ async def lifespan(app: FastAPI):
 
     client = None
     try:
+        config_path= "./mcp_config.json"
         mcp_config = load_mcp_config()
         client = MultiServerMCPClient(mcp_config)
         await client.__aenter__()
