@@ -22,7 +22,7 @@ from langchain_core.runnables.config import RunnableConfig
 from langgraph.graph.message import add_messages
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
-from utils.mcp_tool_mapping import bind_agent_tools, load_mcp_config
+from utils.mcp_tool_mapping import bind_agent_tools, load_mcp_config, get_mcp_tool_name
 from agents.agent_library import agent_configs
 
 from utils.logger import logger
@@ -46,7 +46,7 @@ async def lifespan(app: FastAPI):
         app.state.mcp_client = client
         app.state.mcp_tools = client.get_tools()
 
-        logger.info(f"MCP 도구 로드 : {app.state.mcp_tools}")
+        logger.info(f"MCP 도구 로드 : {get_mcp_tool_name(app.state.mcp_tools)}")
         logger.info(f"MCP 도구 {len(app.state.mcp_tools)}개 로드됨")
 
     except Exception as e:
