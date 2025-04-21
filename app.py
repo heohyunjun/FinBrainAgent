@@ -23,6 +23,7 @@ from langgraph.graph.message import add_messages
 from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from utils.mcp_tool_mapping import bind_agent_tools, load_mcp_config
+from utils.mcp_client_patch import PatchedMultiServerMCPClient, mcp_watchdog
 from agents.agent_library import agent_configs
 
 from utils.logger import logger
@@ -33,43 +34,81 @@ load_dotenv()
 # =======================
 # FastAPI Lifespan 설정
 # =======================
+# @asynccontextmanager
+# async def lifespan(app: FastAPI):
+#     client = None
+#     try:
+#         config_path= "./mcp_config.json"
+#         mcp_config = load_mcp_config(config_path)
+#         client = MultiServerMCPClient(mcp_config)
+#         await client.__aenter__()
+#         logger.info(f"MCP 초기화 완료")
+
+#         app.state.mcp_client = client
+#         app.state.mcp_tools = client.get_tools()
+
+#         logger.info(f"MCP 도구 로드 : {app.state.mcp_tools}")
+#         logger.info(f"MCP 도구 {len(app.state.mcp_tools)}개 로드됨")
+
+#     except Exception as e:
+#         import traceback
+#         logger.warning(f"MCP 초기화 실패: {e}\n{traceback.format_exc()}")
+#         app.state.mcp_client = None
+#         app.state.mcp_tools = []
+
+#     try:
+#         resolved_configs = bind_agent_tools(agent_configs, app.state.mcp_tools)
+#         app.state.main_graph = build_graph(resolved_configs)
+#         logger.info("LangGraph 초기화 완료")
+#     except Exception as e:
+#         logger.error(f"LangGraph 초기화 실패: {e}")
+#         app.state.main_graph = None
+
+#     yield
+
+#     if client:
+#         await client.__aexit__(None, None, None)
+#         logger.info("MCP 클라이언트 종료 완료")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     client = None
+    watchdog = None
     try:
-        config_path= "./mcp_config.json"
+        logger.info(f"Server Start")
+        config_path = "./mcp_config.json"
         mcp_config = load_mcp_config(config_path)
-        client = MultiServerMCPClient(mcp_config)
+        client = PatchedMultiServerMCPClient(mcp_config)
         await client.__aenter__()
-        logger.info(f"MCP 초기화 완료")
-
+        logger.info(f"MCP클라이언트 초기화")
         app.state.mcp_client = client
         app.state.mcp_tools = client.get_tools()
 
         logger.info(f"MCP 도구 로드 : {app.state.mcp_tools}")
         logger.info(f"MCP 도구 {len(app.state.mcp_tools)}개 로드됨")
 
+        resolved_configs = bind_agent_tools(agent_configs, app.state.mcp_tools)
+        app.state.main_graph = build_graph(resolved_configs)
+
+        # Watchdog Task 시작
+        watchdog = asyncio.create_task(mcp_watchdog(client))
+        app.state.watchdog_task = watchdog
+
     except Exception as e:
-        import traceback
-        logger.warning(f"MCP 초기화 실패: {e}\n{traceback.format_exc()}")
+        logger.warning(f"MCP 초기화 실패: {e}")
         app.state.mcp_client = None
         app.state.mcp_tools = []
 
-    try:
-        resolved_configs = bind_agent_tools(agent_configs, app.state.mcp_tools)
-        app.state.main_graph = build_graph(resolved_configs)
-        logger.info("LangGraph 초기화 완료")
-    except Exception as e:
-        logger.error(f"LangGraph 초기화 실패: {e}")
-        app.state.main_graph = None
-
     yield
+
+    if watchdog:
+        watchdog.cancel()
+        await asyncio.gather(watchdog, return_exceptions=True)
+        logger.info("MCP Watchdog 종료")
 
     if client:
         await client.__aexit__(None, None, None)
-        logger.info("MCP 클라이언트 종료 완료")
-
-
+        logger.info("MCP 클라이언트 종료")
 # =======================
 # FastAPI 앱 인스턴스 생성
 # =======================
