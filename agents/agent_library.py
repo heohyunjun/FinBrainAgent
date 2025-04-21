@@ -50,7 +50,7 @@ agent_configs: dict[str, AgentConfig] = {
     "news_and_sentiment_retrieval_agent": {
         "tools": [
             MarketDataTools.get_stock_news, 
-            {"fallback":MarketDataTools.get_websearch_tool, "mcp":"tavily_web_search"}
+            {"fallback":MarketDataTools.get_websearch_tool, "mcp":"nothing"}
             ] ,
         "prompt": get_news_and_sentiment_retrieval_prompt(),
         "agent_type": "worker"

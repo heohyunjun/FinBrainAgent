@@ -17,18 +17,18 @@ def bind_agent_tools(agent_configs, mcp_tools):
                 if tool_name in mcp_tool_map:
                     resolved_tools.append(mcp_tool_map[tool_name])
                 else:
-                    print(f"[WARN] MCP 툴 '{tool_name}' 누락 → fallback 적용 (agent: {agent_name})")
+                    logger.info(f"[WARN] MCP 툴 '{tool_name}' 누락 → fallback 적용 (agent: {agent_name})")
                     if fallback:
                         resolved_tools.append(fallback)
                     else:
-                        print(f"[WARN] fallback도 없어 tool '{tool_name}' 무시됨.")
+                        logger.info(f"[WARN] fallback도 없어 tool '{tool_name}' 무시됨.")
             # 문자열 MCP 툴 참조 
             elif isinstance(tool, str) and tool.startswith("mcp:"):
                 tool_name = tool.replace("mcp:", "")
                 if tool_name in mcp_tool_map:
                     resolved_tools.append(mcp_tool_map[tool_name])
                 else:
-                    print(f"[WARN] MCP 툴 '{tool_name}' 누락 → 원본 문자열 유지 (agent: {agent_name})")
+                    logger.info(f"[WARN] MCP 툴 '{tool_name}' 누락 → 원본 문자열 유지 (agent: {agent_name})")
                     resolved_tools.append(tool)
             else:
                 resolved_tools.append(tool)
@@ -55,3 +55,7 @@ def load_mcp_config(config_path: str = "mcp_config.json") -> dict:
     else:
         logger.warning(f"MCP 설정 파일이 존재하지 않습니다: {config_path}")
         return {}
+
+
+def get_mcp_tool_name(tools):
+    return [tool.name for tool in tools]

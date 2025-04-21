@@ -28,7 +28,6 @@ data_team_leader_llm  = ChatOpenAI(model="gpt-4o-mini-2024-07-18")
 def build_graph(resolved_agent_configs: dict) -> StateGraph:
     # MCP 포함 agent 생성
 
-    logger.info(resolved_agent_configs['news_and_sentiment_retrieval_agent']['tools'])
     news_and_sentiment_retrieval_agent = create_react_agent(
         llm, 
         tools=resolved_agent_configs['news_and_sentiment_retrieval_agent']['tools'],
