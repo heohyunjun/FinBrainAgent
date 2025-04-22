@@ -26,13 +26,60 @@ from langgraph.graph.message import add_messages
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langchain_mcp_adapters.tools import load_mcp_tools
 from utils.mcp_tool_mapping import bind_agent_tools, load_mcp_config, get_mcp_tool_name
-
+from mcp_agent.core.exceptions import ServerInitializationError
 from agents.agent_library import agent_configs
 
 from utils.logger import logger
 from main_graph import build_graph
 
 load_dotenv()
+
+async def mcp_watchdog_task(app: FastAPI, interval: int = 180):
+    logger.info("[Watchdog] 워치독 태스크 시작")
+    while True:
+        logger.debug(f"[Watchdog] 루프 시작: {datetime.now().isoformat()}")
+        # 서버 목록 복사 (루프 중 변경될 수 있으므로)
+        try:
+            server_names = list(app.state.mcp_manager.server_registry.registry.keys())
+        except Exception as e:
+             logger.error(f"[Watchdog] 서버 목록 로드 실패: {e}", exc_info=True)
+             await asyncio.sleep(interval) # 다음 주기에 다시 시도
+             continue
+
+        for name in server_names:
+            logger.debug(f"[Watchdog] 서버 '{name}' 점검 중")
+            server_conn = None
+            try:
+                server_conn = await app.state.mcp_manager.get_server(
+                    name, client_session_factory=MCPAgentClientSession
+                )
+
+                try:
+                    ping_timeout = app.state.mcp_manager.server_registry.registry[name].read_timeout_seconds or 10.0
+                    await asyncio.wait_for(server_conn.session.send_ping(), timeout=ping_timeout)
+                    logger.info(f"[Watchdog] MCP 서버 '{name}' 정상 작동 중 (ping 성공)")
+
+                except asyncio.TimeoutError:
+                    logger.warning(f"[Watchdog] MCP 서버 '{name}' ping 타임아웃. 연결 해제 요청.")
+
+                    await app.state.mcp_manager.disconnect_server(name)
+                except Exception as ping_err:
+                    logger.warning(f"[Watchdog] MCP 서버 '{name}' ping 실패 ({type(ping_err).__name__}): {ping_err}. 연결 해제 요청.")
+                    await app.state.mcp_manager.disconnect_server(name)
+
+            except ServerInitializationError as init_err:
+                logger.warning(f"[Watchdog] MCP 서버 '{name}' 초기화/연결 실패: {init_err}")
+
+            except Exception as get_server_err:
+                logger.error(f"[Watchdog] MCP 서버 '{name}' 점검 중 예상치 못한 오류: {get_server_err}", exc_info=True)
+                try:
+                    if name in app.state.mcp_manager.running_servers:
+                         await app.state.mcp_manager.disconnect_server(name)
+                except Exception as disconnect_err:
+                     logger.error(f"[Watchdog] 오류 발생한 서버 '{name}' 연결 해제 중 추가 오류: {disconnect_err}", exc_info=True)
+
+        logger.debug(f"[Watchdog] 루프 종료: {datetime.now().isoformat()}")
+        await asyncio.sleep(interval)
 
 
 @asynccontextmanager
@@ -59,15 +106,18 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 logger.warning(f"[MCP] '{name}' 연결 실패: {e}")
 
-
         app.state.mcp_tools = all_tools
-
         logger.info(f"MCP 전체 도구 목록: {get_mcp_tool_name(app.state.mcp_tools)}")
 
         # 3. LangGraph 초기화
         resolved_configs = bind_agent_tools(agent_configs, app.state.mcp_tools)
         app.state.main_graph = build_graph(resolved_configs)
         logger.info("LangGraph 초기화 완료")
+
+       # 4. MCP Watchdog 비동기 태스크 시작
+        watchdog_task = asyncio.create_task(mcp_watchdog_task(app))
+        app.state.watchdog_task = watchdog_task
+        logger.info("MCP Watchdog 시작")
 
     except Exception as e:
         logger.error(f"MCP 시스템 초기화 실패: {e}")
@@ -77,6 +127,11 @@ async def lifespan(app: FastAPI):
     yield
 
     # 종료 시 MCP 연결 정리
+    if hasattr(app.state, "mcp_watchdog_task"):
+        app.state.mcp_watchdog_task.cancel()
+        await asyncio.gather(app.state.mcp_watchdog_task, return_exceptions=True)
+        logger.info("MCP Watchdog 종료")
+
     if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
         await app.state.mcp_manager.__aexit__(None, None, None)
         logger.info("MCPConnectionManager 종료 완료")

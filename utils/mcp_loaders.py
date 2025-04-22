@@ -3,6 +3,11 @@ from typing import Dict
 from mcp_agent.config import MCPServerSettings
 from mcp_agent.mcp_server_registry import ServerRegistry
 from mcp_agent.config import MCPServerSettings
+from datetime import datetime, timedelta
+from fastapi import FastAPI
+from utils.logger import logger
+from mcp_agent.mcp.mcp_agent_client_session import MCPAgentClientSession
+
 
 def load_mcp_server_settings(config_path: str) -> Dict[str, MCPServerSettings]:
     with open(config_path, "r", encoding="utf-8") as f:
@@ -18,7 +23,7 @@ def load_mcp_server_settings(config_path: str) -> Dict[str, MCPServerSettings]:
             env=server.get("env"),
             url=server.get("url"),
             headers=server.get("headers"),
-            read_timeout_seconds=30  # 기본값 설정 가능
+            read_timeout_seconds=server.get("read_timeout_seconds") 
         )
         servers[name] = settings
 
