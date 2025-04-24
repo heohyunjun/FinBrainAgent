@@ -177,3 +177,5 @@ cython_debug/
 /team_graph/*.ipynb
 /.vscode/
 /mcp*.json
+/finbrain*.json
+/*.whl
