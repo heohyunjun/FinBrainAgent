@@ -13,26 +13,22 @@ class Report(BaseModel):
     summary: str
     theme: str
 
-class ReportDetailOut(BaseModel):
+class ReportChatRequest(BaseModel):
+    report_id: UUID
+    message: str
+
+class ReportChatResponse(BaseModel):
+    response: str
+class ReportDetailRequest(BaseModel):
+    report_id: UUID
+
+class ReportDetailResponse(BaseModel):
     id: UUID
     title: str
     broker: str
     theme: str
     date: date
     summary: str
-
-class QuestionRequest(BaseModel):
-    message: str
-
-class QuestionResponse(BaseModel):
-    response: str
-
-class ReportOut(BaseModel):
-    id: uuid4
-    title: str
-    broker: str
-    theme: str
-    date: date
 
 class UserInput(BaseModel):
     message: str
