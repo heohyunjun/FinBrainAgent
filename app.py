@@ -2,17 +2,18 @@ import os
 import logging
 import json
 from datetime import datetime
-from uuid import uuid4
+from uuid import uuid4, UUID
+
 from typing import Annotated, Optional, List
 from contextlib import asynccontextmanager
 import time
 import asyncio
 import platform
-
+from datetime import date
 
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -30,6 +31,8 @@ from mcp_agent.core.exceptions import ServerInitializationError
 from agents.agent_library import agent_configs
 
 from utils.logger import logger
+from routers.v1 import reports
+from schemas.report import UserInput
 from main_graph import build_graph
 
 load_dotenv()
@@ -114,10 +117,10 @@ async def lifespan(app: FastAPI):
         app.state.main_graph = build_graph(resolved_configs)
         logger.info("LangGraph 초기화 완료")
 
-       # 4. MCP Watchdog 비동기 태스크 시작
-        watchdog_task = asyncio.create_task(mcp_watchdog_task(app))
-        app.state.watchdog_task = watchdog_task
-        logger.info("MCP Watchdog 시작")
+    #    # 4. MCP Watchdog 비동기 태스크 시작
+    #     watchdog_task = asyncio.create_task(mcp_watchdog_task(app))
+    #     app.state.watchdog_task = watchdog_task
+    #     logger.info("MCP Watchdog 시작")
 
     except Exception as e:
         logger.error(f"MCP 시스템 초기화 실패: {e}")
@@ -126,11 +129,11 @@ async def lifespan(app: FastAPI):
 
     yield
 
-    # 종료 시 MCP 연결 정리
-    if hasattr(app.state, "mcp_watchdog_task"):
-        app.state.mcp_watchdog_task.cancel()
-        await asyncio.gather(app.state.mcp_watchdog_task, return_exceptions=True)
-        logger.info("MCP Watchdog 종료")
+    # # 종료 시 MCP 연결 정리
+    # if hasattr(app.state, "mcp_watchdog_task"):
+    #     app.state.mcp_watchdog_task.cancel()
+    #     await asyncio.gather(app.state.mcp_watchdog_task, return_exceptions=True)
+    #     logger.info("MCP Watchdog 종료")
 
     if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
         await app.state.mcp_manager.__aexit__(None, None, None)
@@ -148,17 +151,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.include_router(reports.router, prefix="/v1")
 
-# =======================
-# 데이터 구조
-# =======================
-class UserInput(BaseModel):
-    message: str
-    thread_id: Optional[str] = None
 
 class AgentState(BaseModel):
     query: str
     messages: Annotated[List[AnyMessage], add_messages]
+
 
 # 메모리 저장소
 memory_store = {}  # key: thread_id, value: List[BaseMessage]
@@ -215,3 +214,6 @@ async def handle_chat(request: UserInput):
             "status": "error",
             "error_message": str(e)
         }
+    
+
+
