@@ -26,23 +26,24 @@ async def preload_reports_from_db(app: FastAPI):
             result = await conn.execute(query)
             rows = result.fetchall()
 
-        reports_cache = [
-            Report(
-                id=row.id,
-                title=row.title,
-                broker=row.broker,
-                date=row.date,
-                view_count=row.view_count,
-                summary=row.summary,
-                theme=row.theme
-            )
-            for row in rows
-        ]
+            reports_cache = [
+                Report(
+                    id=row.id,
+                    title=row.title,
+                    broker=row.broker,
+                    date=row.date,
+                    view_count=row.view_count,
+                    summary=row.summary,
+                    theme=row.theme
+                )
+                for row in rows
+            ]
 
-        logger.info(f"리포트 {len(reports_cache)}개 메모리에 캐싱 완료.")
+            logger.info(f"리포트 {len(reports_cache)}개 메모리에 캐싱 완료.")
     except Exception as e:
-        logger.error(f"리포트 캐싱 실패: {e}")
-        reports_cache = []  # 실패 시 캐시 초기화
+        logger.error(f"preload_reports_from_db 실패: {e}", exc_info=True)
+        reports_cache = []
+
 
 async def preload_and_schedule_refresh(app: FastAPI):
     await preload_reports_from_db(app)  # 서버 부팅 시 1회
