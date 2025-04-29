@@ -10,7 +10,7 @@ import time
 import asyncio
 import platform
 from datetime import date
-
+from sqlalchemy.ext.asyncio import create_async_engine
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from fastapi import FastAPI, Request
@@ -90,14 +90,18 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("Server Start")
 
-        # 1. MCP 서버 레지스트리 로드
+        # DB 
+        database_url = os.getenv("DATABASE_URL")
+        engine = create_async_engine(database_url, echo=False, future=True)
+        app.state.engine = engine 
+
+        # MCP 서버 레지스트리 로드
         server_registry = get_server_registry()
         manager = MCPConnectionManager(server_registry)
         await manager.__aenter__()
-
         app.state.mcp_manager = manager
 
-        # 2. MCP 서버 연결 및 초기화
+        # MCP 서버 연결 및 초기화
         all_tools = []
         for name in server_registry.registry:
             try:
@@ -112,10 +116,15 @@ async def lifespan(app: FastAPI):
         app.state.mcp_tools = all_tools
         logger.info(f"MCP 전체 도구 목록: {get_mcp_tool_name(app.state.mcp_tools)}")
 
-        # 3. LangGraph 초기화
+        # LangGraph 초기화
         resolved_configs = bind_agent_tools(agent_configs, app.state.mcp_tools)
         app.state.main_graph = build_graph(resolved_configs)
         logger.info("LangGraph 초기화 완료")
+
+        # 리포트 preload + 24시간마다 refresh task 시작
+        report_refresh_task = asyncio.create_task(reports.preload_and_schedule_refresh(app))
+        app.state.report_refresh_task = report_refresh_task
+        logger.info("리포트 preload + 주기적 refresh Task 시작")
 
     #    # 4. MCP Watchdog 비동기 태스크 시작
     #     watchdog_task = asyncio.create_task(mcp_watchdog_task(app))
@@ -129,6 +138,14 @@ async def lifespan(app: FastAPI):
 
     yield
 
+    # 서버 종료 정리
+    if hasattr(app.state, "report_refresh_task"):
+        app.state.report_refresh_task.cancel()
+        try:
+            await app.state.report_refresh_task
+        except asyncio.CancelledError:
+            logger.info("리포트 preload+refresh Task 종료 완료")
+
     # # 종료 시 MCP 연결 정리
     # if hasattr(app.state, "mcp_watchdog_task"):
     #     app.state.mcp_watchdog_task.cancel()
@@ -138,7 +155,10 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
         await app.state.mcp_manager.__aexit__(None, None, None)
         logger.info("MCPConnectionManager 종료 완료")
-
+        
+    if hasattr(app.state, "engine"):
+        await app.state.engine.dispose()
+        logger.info("DB 연결 풀 종료 완료")
 
 # =======================
 # FastAPI 앱 인스턴스 생성
