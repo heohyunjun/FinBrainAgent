@@ -1,12 +1,9 @@
-from fastapi import APIRouter, Request, FastAPI
-from uuid import UUID
 import asyncio
-
 from typing import List
-from datetime import date
-from sqlalchemy.ext.asyncio import create_async_engine
+
+from fastapi import APIRouter, FastAPI, HTTPException
 from sqlalchemy import text as sqlalchemy_text
-import os
+
 from schemas.report import Report, ReportDetailResponse, ReportChatResponse, ReportChatRequest, ReportDetailRequest
 
 router = APIRouter()
@@ -51,18 +48,25 @@ async def preload_and_schedule_refresh(app: FastAPI):
 async def get_reports():
     return reports_cache
 
+# 리포트 상세 조회
 @router.post("/reports/detail", response_model=ReportDetailResponse)
 async def get_report_detail(request: ReportDetailRequest):
     print(f"[POST] /reports/detail - 요청 도착")
     print(f"Report ID: {request.report_id}")
 
+    # reports_cache에서 해당 id를 가진 Report 찾기
+    matching_report = next((r for r in reports_cache if r.id == request.report_id), None)
+
+    if not matching_report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
     return ReportDetailResponse(
-        id=request.report_id,
-        title="AI 대세전환",
-        broker="미래에셋",
-        theme="반도체",
-        date=date.today(),
-        summary="AI에 대한 전환적 투자 기회가 다가오고 있습니다...",
+        id=matching_report.id,
+        title=matching_report.title,
+        broker=matching_report.broker,
+        theme=matching_report.theme,
+        date=matching_report.date,
+        summary=matching_report.summary,
     )
 
 

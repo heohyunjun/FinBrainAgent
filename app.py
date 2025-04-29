@@ -1,21 +1,15 @@
 import os
-import logging
-import json
-from datetime import datetime
-from uuid import uuid4, UUID
-
-from typing import Annotated, Optional, List
-from contextlib import asynccontextmanager
-import time
 import asyncio
-import platform
-from datetime import date
+from datetime import datetime
+from uuid import uuid4
+from typing import Annotated, List
+from contextlib import asynccontextmanager
+
 from sqlalchemy.ext.asyncio import create_async_engine
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 
 from mcp_agent.mcp.mcp_agent_client_session import MCPAgentClientSession
 from mcp_agent.mcp.mcp_connection_manager import MCPConnectionManager
@@ -155,7 +149,7 @@ async def lifespan(app: FastAPI):
     if hasattr(app.state, "mcp_manager") and app.state.mcp_manager:
         await app.state.mcp_manager.__aexit__(None, None, None)
         logger.info("MCPConnectionManager 종료 완료")
-        
+
     if hasattr(app.state, "engine"):
         await app.state.engine.dispose()
         logger.info("DB 연결 풀 종료 완료")
