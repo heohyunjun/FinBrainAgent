@@ -5,11 +5,13 @@ from fastapi import APIRouter, FastAPI, HTTPException
 from sqlalchemy import text as sqlalchemy_text
 
 from schemas.report import Report, ReportDetailResponse, ReportChatResponse, ReportChatRequest, ReportDetailRequest
+from utils.logger import logger
 
 router = APIRouter()
 
 # 전역 캐시
 reports_cache: List[Report] = []
+
 
 async def preload_reports_from_db(app: FastAPI):
     global reports_cache
@@ -19,29 +21,34 @@ async def preload_reports_from_db(app: FastAPI):
         ORDER BY date DESC;
     """)
 
-    async with app.state.engine.begin() as conn:
-        result = await conn.execute(query)
-        rows = result.fetchall()
+    try:
+        async with app.state.engine.begin() as conn:
+            result = await conn.execute(query)
+            rows = result.fetchall()
 
-    reports_cache = [
-        Report(
-            id=row.id,
-            title=row.title,
-            broker=row.broker,
-            date=row.date,
-            view_count=row.view_count,
-            summary=row.summary,
-            theme=row.theme
-        )
-        for row in rows
-    ]
-    print(f"리포트 {len(reports_cache)}개 메모리에 캐싱 완료.")
+        reports_cache = [
+            Report(
+                id=row.id,
+                title=row.title,
+                broker=row.broker,
+                date=row.date,
+                view_count=row.view_count,
+                summary=row.summary,
+                theme=row.theme
+            )
+            for row in rows
+        ]
+
+        logger.info(f"리포트 {len(reports_cache)}개 메모리에 캐싱 완료.")
+    except Exception as e:
+        logger.error(f"리포트 캐싱 실패: {e}")
+        reports_cache = []  # 실패 시 캐시 초기화
 
 async def preload_and_schedule_refresh(app: FastAPI):
     await preload_reports_from_db(app)  # 서버 부팅 시 1회
     while True:
         await asyncio.sleep(60 * 60 * 24)  # 24시간 대기
-        print("24시간 지남: 리포트 리스트 DB에서 새로 불러오는 중...")
+        logger.info("24시간 지남: 리포트 리스트 DB에서 새로 불러오는 중...")
         await preload_reports_from_db(app)
 
 @router.get("/reports", response_model=List[Report])
