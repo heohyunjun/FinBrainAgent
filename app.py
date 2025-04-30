@@ -97,13 +97,6 @@ async def lifespan(app: FastAPI):
         engine = create_async_engine(database_url, echo=False, future=True)
         app.state.engine = engine 
 
-        from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-        from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
-
-        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
-        llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini-2024-07-18")
-
-
         # MCP 서버 레지스트리 로드
         server_registry = get_server_registry()
         manager = MCPConnectionManager(server_registry)
