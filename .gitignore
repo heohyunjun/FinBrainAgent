@@ -179,3 +179,5 @@ cython_debug/
 /mcp*.json
 /finbrain*.json
 /*.whl
+/reports_pdf/*.pdf
+/test*.ipynb
