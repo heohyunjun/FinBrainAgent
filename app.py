@@ -27,9 +27,17 @@ from agents.agent_library import agent_configs
 from utils.logger import logger
 from routers.v1 import reports
 from schemas.report import UserInput
+from services.vector_store_provider import VectorStoreProvider
 from main_graph import build_graph
 
 load_dotenv()
+GCP_PROJECT_ID = os.getenv("GCP_PROJECT_ID")
+GCP_REGION = os.getenv("GCP_REGION")
+GCP_INSTANCE = os.getenv("GCP_INSTANCE")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+CHUNKS_TABLE_NAME = "report_chunks"
 
 async def mcp_watchdog_task(app: FastAPI, interval: int = 180):
     logger.info("[Watchdog] 워치독 태스크 시작")
@@ -89,11 +97,28 @@ async def lifespan(app: FastAPI):
         engine = create_async_engine(database_url, echo=False, future=True)
         app.state.engine = engine 
 
+        from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+        from langchain_google_cloud_sql_pg import PostgresEngine, PostgresVectorStore
+
+        embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+        llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini-2024-07-18")
+
+
         # MCP 서버 레지스트리 로드
         server_registry = get_server_registry()
         manager = MCPConnectionManager(server_registry)
         await manager.__aenter__()
         app.state.mcp_manager = manager
+
+        # VectorStoreProvider 클래스 기반 초기화
+        try:
+            vector_provider = VectorStoreProvider()
+            await vector_provider.init()
+            app.state.vector_provider = vector_provider
+            logger.info("VectorStoreProvider 초기화 완료")
+        except Exception as e:
+            logger.error(f"VectorStoreProvider 초기화 실패: {e}")
+            app.state.vector_provider = None
 
         # MCP 서버 연결 및 초기화
         all_tools = []
